@@ -83,6 +83,17 @@ Creates a new WebView window.
 *   `url` (string): The URL to load (http/https) or path to a local HTML file or HTML string.
 *   `options` (object): Configuration options.
 
+### `start()`
+
+Starts the application event loop. This keeps the Node.js process alive until all windows are closed.
+
+### `expose(name, callback)`
+
+Exposes a Node.js function to the frontend.
+
+*   `name` (string): The name of the function as it will appear in `window.ewvjs.api`.
+*   `callback` (function): The Node.js function to execute. Can be async.
+
 ### Window Options
 
 ```typescript
@@ -137,7 +148,22 @@ Once a window is created, you can control it using the returned `Window` instanc
 
 ### Custom Context Menus
 
-Define native context menus using `on_context_menu`:
+Define native context menus using `on_context_menu`. It should return an array of `ContextMenuItem` objects.
+
+#### ContextMenuItem Interface
+
+```typescript
+interface ContextMenuItem {
+    label?: string;
+    type?: 'normal' | 'separator' | 'checkbox' | 'submenu';
+    checked?: boolean;
+    enabled?: boolean;
+    submenu?: ContextMenuItem[];
+    click?: () => void;
+}
+```
+
+Example:
 
 ```javascript
 win.on_context_menu = (params) => {
@@ -149,19 +175,122 @@ win.on_context_menu = (params) => {
 };
 ```
 
-## CLI & Packaging
+## CLI Reference
 
-`ewvjs` comes with a CLI tool to package your application into a standalone executable.
+`ewvjs` provides a command-line interface for creating and packaging applications.
+
+### Installation
+
+The CLI is included with the `ewvjs` package and can be run using `npx`:
 
 ```bash
-npx ewvjs package app.js --output myapp.exe --icon icon.ico
+npx ewvjs <command> [options]
 ```
 
+### Commands
+
+#### `init` - Initialize a New Project
+
+Create a new ewvjs project with a sample application structure.
+
+**Usage:**
+```bash
+npx ewvjs init [name]
+```
+
+**Arguments:**
+*   `name` - Project name (default: `my-ewvjs-app`)
+
+**Example:**
+```bash
+npx ewvjs init my-awesome-app
+cd my-awesome-app
+npm install
+npm start
+```
+
+This creates:
+*   `package.json` - Project configuration with scripts
+*   `app.js` - Sample application with Node.js integration
+*   `assets/` - Directory for static assets
+*   `README.md` - Project documentation
+
+---
+
+#### `package` - Package Application
+
+Package your ewvjs application into a standalone executable.
+
+**Usage:**
+```bash
+npx ewvjs package <entry> [options]
+```
+
+**Arguments:**
+*   `entry` - Entry point JavaScript file (required, e.g., `app.js`)
+
 **Options:**
-*   `--output, -o`: Output filename.
-*   `--icon, -i`: Path to application icon (.ico).
-*   `--assets, -a`: Directory of assets to copy.
-*   `--target, -t`: Target platform (default: node18-win-x64).
+
+| Option | Alias | Description | Default |
+|--------|-------|-------------|---------|
+| `--output <name>` | `-o` | Output executable name (without .exe) | `app` |
+| `--name <name>` | `-n` | Application name | `My App` |
+| `--icon <file>` | `-i` | Path to application icon (.ico file) | None |
+| `--assets <dir>` | `-a` | Assets directory to include in package | `./assets` |
+| `--target <target>` | `-t` | Target platform | `node18-win-x64` |
+| `--modules <modules>` | `-m` | Additional node modules to bundle (comma-separated) | None |
+| `--compress` | | Compress executable with UPX | `false` |
+| `--no-native` | | Skip bundling native DLLs (if already included) | Includes by default |
+
+**Examples:**
+
+Basic packaging:
+```bash
+npx ewvjs package app.js
+```
+
+Full customization:
+```bash
+npx ewvjs package app.js \
+  --output myapp \
+  --name "My Application" \
+  --icon icon.ico \
+  --assets ./public \
+  --modules axios,lodash \
+  --compress
+```
+
+Package with custom target:
+```bash
+npx ewvjs package app.js -o myapp -t node20-win-x64
+```
+
+**Output:**
+
+The packaged application will be created in the `dist/` directory with:
+*   `<output>.exe` - Standalone executable
+*   Native WebView2 dependencies (unless `--no-native` is used)
+*   Bundled assets from the specified directory
+
+**Notes:**
+*   Icon file must be in `.ico` format
+*   Additional modules should be listed without spaces: `axios,lodash,express`
+*   The `--compress` option requires UPX to be installed and available in PATH
+*   Default target `node18-win-x64` works with Node.js 18+ on 64-bit Windows
+
+### Getting Help
+
+Display available commands and options:
+```bash
+npx ewvjs --help
+npx ewvjs package --help
+npx ewvjs init --help
+```
+
+Display version:
+```bash
+npx ewvjs --version
+```
 
 ## License
 
