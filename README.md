@@ -31,7 +31,6 @@ const { create_window, start } = require('ewvjs');
 const win = create_window('My App', 'https://www.google.com', {
     width: 1024,
     height: 768,
-    dark_mode: true
 });
 
 // Run the window
@@ -98,9 +97,6 @@ Exposes a Node.js function to the frontend.
 
 ```typescript
 {
-    title?: string;              // Window title (overrides create_window arg)
-    url?: string;                // URL to load (overrides create_window arg)
-    html?: string;               // HTML content to load directly
     width?: number;              // Window width
     height?: number;             // Window height
     x?: number;                  // X position
@@ -135,13 +131,12 @@ Exposes a Node.js function to the frontend.
 Once a window is created, you can control it using the returned `Window` instance:
 
 *   **Lifecycle**: `run()`, `close()`, `destroy()`
-*   **State**: `maximize()`, `minimize()`, `restore()`, `show()`, `hide()`, `focus()`, `blur()`
+*   **State**: `maximize()`, `minimize()`, `restore()`, `hide()`
 *   **Size & Position**:
     *   `getSize()`, `setSize(w, h)`, `resize(w, h)`
     *   `getPosition()`, `setPosition(x, y)`, `move(x, y)`
 *   **Interaction**:
     *   `setTitle(title)`
-    *   `navigate(url)`
     *   `evaluate(script)`: Execute JavaScript in the WebView.
     *   `setIcon(path)`
 *   **Cookies**: `get_cookies()`, `set_cookie(...)`, `clear_cookies()`
