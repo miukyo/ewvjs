@@ -12,7 +12,7 @@
 - 🖱️ **Context Menus**: Customizable native right-click context menus.
 - 📦 **Packaging**: Built-in CLI tool to package your app into a standalone executable.
 - 🔧 **Native Bindings**: High-performance C# bindings via `node-api-dotnet`.
-- 🖼️ **Customization**: Support for frameless windows, transparency, dark mode, and more.
+- 🖼️ **Customization**: Support for frameless windows, transparency, vibrancy, and more.
 
 ## Installation
 

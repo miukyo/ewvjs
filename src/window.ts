@@ -10,6 +10,7 @@ export class Window {
     private _resolveClosed!: () => void;
     private _menuCallbacks: Map<string, () => void> = new Map();
     private _exposedFunctions: { [key: string]: Function };
+    private _isClosed: boolean = false;
 
     on_context_menu: (items: any[]) => ContextMenuItem[] | null | Promise<ContextMenuItem[] | null> = () => null;
 
@@ -34,6 +35,10 @@ export class Window {
         return this._closedPromise;
     }
 
+    get is_closed() {
+        return this._isClosed;
+    }
+
     async run() {
         this.controller = await this.platform.createWindow(this.options);
         
@@ -53,17 +58,32 @@ export class Window {
     }
 
     private async _call(method: string, payload: any = null): Promise<any> {
+        if (this._isClosed) {
+            console.warn(`Cannot call ${method}: Window is closed`);
+            return null;
+        }
+        
         if (!this.controller || !this.controller[method]) {
             throw new Error(`Window not running or ${method} not supported`);
         }
         
-        const result = this.controller[method](payload);
-        
-        // Check if method returns a Promise (node-api-dotnet JSCallback style)
-        if (result && typeof result.then === 'function') {
-            return result;
-        } else {
-            return result;
+        try {
+            const result = this.controller[method](payload);
+            
+            // Check if method returns a Promise (node-api-dotnet JSCallback style)
+            if (result && typeof result.then === 'function') {
+                return result;
+            } else {
+                return result;
+            }
+        } catch (err: any) {
+            // If window was closed mid-operation, mark as closed and return null
+            if (err && err.message && err.message.includes('Window not initialized')) {
+                this._isClosed = true;
+                console.warn(`Window was closed during ${method} call`);
+                return null;
+            }
+            throw err;
         }
     }
 
@@ -76,8 +96,12 @@ export class Window {
         return this.evaluate_js(script); 
     }
 
-    async close() { 
-        return this._call('close'); 
+    async close() {
+        if (this._isClosed) return;
+        this._isClosed = true;
+        const result = await this._call('close');
+        this._resolveClosed();
+        return result;
     }
 
     async destroy() {
@@ -162,6 +186,7 @@ export class Window {
 
             // Handle special messages
             if (funcName === 'closed') {
+                this._isClosed = true;
                 this._resolveClosed();
                 return null;
             }

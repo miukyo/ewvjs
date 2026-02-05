@@ -1,3 +1,4 @@
+const { settings } = require('node:cluster');
 const ewvjs = require('../dist/index');
 
 async function test() {
@@ -34,7 +35,7 @@ async function test() {
 
     await w.run();
     console.log('Window running.');
-    
+
     // Wait for API injection
     console.log('Waiting for API to be injected...');
     await new Promise(r => setTimeout(r, 1000));
@@ -75,6 +76,7 @@ async function test() {
     console.log('Features test sequence complete. Observe the window.');
     await ewvjs.start();
     console.log('All windows closed. Test complete.');
+
 }
 
-test()
+test().catch(console.error);

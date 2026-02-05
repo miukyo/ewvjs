@@ -9,6 +9,7 @@ export class WebView {
     private _startPromise: Promise<void> | null = null;
     private _resolveStart: (() => void) | null = null;
     private _heartbeat: NodeJS.Timeout | null = null;
+    private _resolveOnce: boolean = false;
 
     constructor() {
         if (process.platform === 'win32') {
@@ -36,7 +37,7 @@ export class WebView {
 
     async start(): Promise<void> {
         if (this._windows.size === 0) return;
-        
+
         // Keep process alive while windows are open
         this._heartbeat = setInterval(() => { }, 1000);
 
@@ -54,15 +55,17 @@ export class WebView {
         }
         if (this._resolveStart) {
             this._resolveStart();
+            this._resolveOnce = true;
             this._resolveStart = null;
         }
         
         // Force exit after a short delay to ensure cleanup completes
-        setTimeout(() => {
-            process.exit(0);
-        }, 100);
+        if (this._resolveOnce) {
+            setTimeout(() => {
+                process.exit(0);
+            }, 100);
+        }
     }
-
     expose(name: string, func: Function): void {
         this.exposed_functions[name] = func;
     }

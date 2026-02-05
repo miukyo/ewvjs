@@ -1,7 +1,7 @@
 {
   "name": "ewvjs",
-  "version": "1.0.0",
-  "description": "Embedded WebView for JavaScript - Windows WebView2 bindings for Node.js",
+  "version": "1.0.1",
+  "description": "Embedded WebView for JavaScript - Edge WebView2 bindings for Node.js",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
@@ -49,10 +49,10 @@
   ],
   "devDependencies": {
     "@types/node": "^25.2.0",
-    "@yao-pkg/pkg": "^6.12.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@yao-pkg/pkg": "^6.12.0",
     "archiver": "^7.0.1",
     "commander": "^12.1.0",
     "node-api-dotnet": "^0.9.19",
