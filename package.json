@@ -18,14 +18,14 @@
     "native/**/*",
     "bin/**/*",
     "lib/**/*",
+    "src/csharp/bin/Release/**/*",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
     "prebuild": "node scripts/copy-native.js",
     "build": "npm run prebuild && tsc",
-    "build:webview": "dotnet build src/csharp/WebView.csproj -c Release",
-    "prepare": "npm run build"
+    "build:webview": "dotnet build src/csharp/WebView.csproj -c Release"
   },
   "keywords": [
     "webview",
@@ -37,8 +37,12 @@
     "packaging",
     "cli"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "miukyo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/miukyo/ewvjs"
+  },
   "type": "commonjs",
   "os": [
     "win32"

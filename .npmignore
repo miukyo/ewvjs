@@ -19,6 +19,7 @@ docs/
 *.pdb
 obj/
 src/csharp/
+!src/csharp/bin/
 
 # Keep only what's needed in package
 !dist/

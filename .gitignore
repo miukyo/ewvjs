@@ -30,3 +30,6 @@ src/csharp/obj/
 # Testing
 .nyc_output/
 coverage/
+
+# npm
+.npmrc
