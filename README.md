@@ -1,3 +1,5 @@
+<img width="786" height="593" alt="image" src="https://github.com/user-attachments/assets/94957de5-1abd-458f-84cf-43174e05015c" />
+
 # ewvjs
 
 **Embedded WebView for JavaScript**
