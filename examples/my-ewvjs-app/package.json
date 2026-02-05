@@ -1,0 +1,13 @@
+{
+  "name": "my-ewvjs-app",
+  "version": "1.0.0",
+  "description": "My ewvjs application",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "package": "ewvjs package app.js -o myapp -n \"My App\""
+  },
+  "dependencies": {
+    "ewvjs": "file:../.."
+  }
+}

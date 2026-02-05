@@ -1,0 +1,57 @@
+{
+  "name": "ewvjs",
+  "version": "1.0.0",
+  "description": "Embedded WebView for JavaScript - Windows WebView2 bindings for Node.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "ewvjs": "./bin/ewvjs-cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/**/*",
+    "native/**/*",
+    "bin/**/*",
+    "lib/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "prebuild": "node scripts/copy-native.js",
+    "build": "npm run prebuild && tsc",
+    "build:webview": "dotnet build src/csharp/WebView.csproj -c Release",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "webview",
+    "webview2",
+    "windows",
+    "electron-alternative",
+    "gui",
+    "native",
+    "packaging",
+    "cli"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "os": [
+    "win32"
+  ],
+  "devDependencies": {
+    "@types/node": "^25.2.0",
+    "@yao-pkg/pkg": "^6.12.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "commander": "^12.1.0",
+    "node-api-dotnet": "^0.9.19",
+    "resedit": "^2.0.2"
+  }
+}

@@ -1,0 +1,27 @@
+# Source files
+src/
+tsconfig.json
+
+# Tests
+test/
+
+# Examples and docs (use GitHub for these)
+examples/
+docs/
+
+# Development
+.vs/
+.vscode/
+*.log
+*.lock
+
+# Build artifacts (intermediate)
+*.pdb
+obj/
+src/csharp/
+
+# Keep only what's needed in package
+!dist/
+!native/
+!bin/
+!lib/
