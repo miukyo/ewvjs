@@ -1,0 +1,126 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Hello ewvjs</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: sans-serif;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      text-align: center;
+      max-width: 600px;
+    }
+    
+    h1 {
+      font-size: 3em;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    p {
+      font-size: 1.2em;
+      margin-bottom: 30px;
+      opacity: 0.9;
+    }
+    
+    input {
+      width: 100%;
+      padding: 15px;
+      font-size: 16px;
+      border: none;
+      margin-bottom: 15px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #333;
+    }
+    
+    button {
+      background: white;
+      color: #000000;
+      border: none;
+      padding: 15px 30px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin: 5px;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .result {
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.15);
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .info {
+      text-align: left;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 Hello ewvjs!</h1>
+    <p>A lightweight WebView2 application for Windows</p>
+    
+    <input type="text" id="nameInput" placeholder="Enter your name..." value="World">
+    
+    <div>
+      <button onclick="sayHello()">Greet Me</button>
+      <button onclick="showSystemInfo()">System Info</button>
+    </div>
+    
+    <div class="result" id="result">
+      Click a button to see the result...
+    </div>
+  </div>
+  
+  <script>
+    async function sayHello() {
+      const name = document.getElementById('nameInput').value || 'World';
+      const result = await window.ewvjs.api.greet(name);
+      document.getElementById('result').innerHTML = '<strong>' + result + '</strong>';
+    }
+    
+    async function showSystemInfo() {
+      const info = await window.ewvjs.api.getSystemInfo();
+      document.getElementById('result').innerHTML = 
+        '<div class="info">' +
+        '<strong>System Information:</strong><br>' +
+        'Platform: ' + info.platform + '<br>' +
+        'Architecture: ' + info.arch + '<br>' +
+        'Node.js: ' + info.nodeVersion + '<br>' +
+        'Uptime: ' + Math.floor(info.uptime) + ' seconds' +
+        '</div>';
+    }
+  </script>
+</body>
+</html>

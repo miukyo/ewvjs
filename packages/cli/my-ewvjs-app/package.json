@@ -1,5 +1,5 @@
 {
-  "name": "{{PROJECT_NAME}}",
+  "name": "my-ewvjs-app",
   "version": "1.0.0",
   "description": "My ewvjs application",
   "main": "app.js",
@@ -8,7 +8,7 @@
     "package": "ewvjs package app.js -o myapp -n \"My App\""
   },
   "dependencies": {
-    "ewvjs": "^1.0.0",
-    "ewvjs-cli": "^1.0.0"
+    "ewvjs": "file:../../../",
+    "ewvjs-cli": "file:../"
   }
 }
