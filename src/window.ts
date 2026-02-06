@@ -113,7 +113,6 @@ export class Window {
     async restore() { return this._call('restore'); }
     async minimize() { return this._call('minimize'); }
     async focus() { return this._call('focus'); }
-    async blur() { return this._call('blur'); }
     async show() { return this._call('show'); }
     async hide() { return this._call('hide'); }
 
@@ -202,6 +201,15 @@ export class Window {
 
             if (funcName === 'context_menu_requested') {
                 return this._handleContextMenu(params);
+            }
+
+            // Handle window state methods
+            if (funcName.startsWith('window_')) {
+                const method = funcName.substring(7); // Remove 'window_' prefix
+                if (typeof (this as any)[method] === 'function') {
+                    await (this as any)[method]();
+                }
+                return null;
             }
 
             // Handle exposed function calls

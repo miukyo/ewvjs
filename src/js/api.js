@@ -231,6 +231,15 @@ window.ewvjs = {
             }
         }, 10);
     },
+
+    _callWindowMethod: function (methodName) {
+        var __id = (Math.random() + "").substring(2);
+        window.chrome.webview.postMessage([
+            'window_' + methodName,
+            '[]',
+            __id
+        ]);
+    },
 };
 
 window.ewvjs._hookConsole = function () {
@@ -254,3 +263,40 @@ window.ewvjs._hookConsole = function () {
 
 window.ewvjs._hookConsole();
 window.ewvjs._hookDrag();
+
+// Add window state methods directly to window object
+window.close = function () {
+    window.ewvjs._callWindowMethod('close');
+};
+
+window.maximize = function () {
+    window.ewvjs._callWindowMethod('maximize');
+};
+
+window.restore = function () {
+    window.ewvjs._callWindowMethod('restore');
+};
+
+window.minimize = function () {
+    window.ewvjs._callWindowMethod('minimize');
+};
+
+window.focus = function () {
+    window.ewvjs._callWindowMethod('focus');
+};
+
+window.show = function () {
+    window.ewvjs._callWindowMethod('show');
+};
+
+window.hide = function () {
+    window.ewvjs._callWindowMethod('hide');
+};
+
+window.resize = function () {
+    window.ewvjs._callWindowMethod('resize');
+};
+
+window.move = function () {
+    window.ewvjs._callWindowMethod('move');
+};
