@@ -1,6 +1,6 @@
 {
   "name": "ewvjs-cli",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "CLI tool for packaging ewvjs applications",
   "main": "./index.js",
   "bin": {
