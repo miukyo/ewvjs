@@ -123,7 +123,7 @@ function runPkg(args) {
  * @param {string} config.icon - Icon file path (.ico)
  * @param {string} config.name - Application name
  * @param {string} config.target - Target platform (e.g., node18-win-x64)
- * @param {boolean} config.compress - Whether to compress with UPX
+ * @param {boolean} config.compress - Whether to compress the executable
  * @param {boolean} config.includeNative - Whether to include native DLLs
  * @param {string[]} config.additionalModules - Additional node modules to bundle
  */
@@ -318,6 +318,10 @@ async function packageApp(config) {
     console.log('\n🎨 Step 4: Setting application icon...');
     await setIcon(outputPath, icon, name);
     console.log('   ✓ Icon applied');
+  } else if (name) {
+    console.log('\n🎨 Step 4: Setting application name...');
+    await setIcon(outputPath, null, name);
+    console.log('   ✓ Name applied');
   }
 
   // Step 5: Create ZIP archive

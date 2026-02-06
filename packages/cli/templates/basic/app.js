@@ -15,7 +15,7 @@ expose('getSystemInfo', () => {
 });
 
 // Create main window
-const window = create_window('Hello ewvjs', `file://${path.resolve('index.html')}`, {
+const window = create_window('Hello ewvjs', `file://${path.resolve('assets/index.html')}`, {
   width: 800,
   height: 600,
   vibrancy: true,
