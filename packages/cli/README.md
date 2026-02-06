@@ -11,7 +11,7 @@ npm install -g ewvjs-cli
 Or use with npx:
 
 ```bash
-npx ewvjs-cli ewv --help
+npx ewvjs-cli --help
 ```
 
 ## Usage
@@ -19,32 +19,32 @@ npx ewvjs-cli ewv --help
 ### List available templates
 
 ```bash
-ewv init --list-templates
+ewvjs-cli init --list-templates
 ```
 
 ### Initialize a new ewvjs project
 
 ```bash
-ewv init my-app
+ewvjs-cli init my-app
 ```
 
 With a specific template:
 
 ```bash
 # Minimal template (simple Hello World)
-ewv init my-app --template minimal
+ewvjs-cli init my-app --template minimal
 
 # Basic template (default - interactive with APIs)
-ewv init my-app --template basic
+ewvjs-cli init my-app --template basic
 
 # Advanced template (multiple windows, file operations)
-ewv init my-app --template advanced
+ewvjs-cli init my-app --template advanced
 ```
 
 ### Package your application
 
 ```bash
-ewv package app.js -o myapp -n "My Application"
+ewvjs-cli package app.js -o myapp -n "My Application"
 ```
 
 #### Options
@@ -62,7 +62,7 @@ ewv package app.js -o myapp -n "My Application"
 
 ```bash
 # Create a new project
-ewv init my-awesome-app
+ewvjs-cli init my-awesome-app
 cd my-awesome-app
 
 # Install dependencies
@@ -72,13 +72,13 @@ npm install
 npm start
 
 # Create with a specific template
-ewv init simple-app --template minimal
+ewvjs-cli init simple-app --template minimal
 
 # Create an advanced app
-ewv init pro-app --template advanced
+ewvjs-cli init pro-app --template advanced
 
 # Package for distribution
-ewv package app.js -o MyAwesomeApp -n "My Awesome App" -i icon.ico --compress
+ewvjs-cli package app.js -o MyAwesomeApp -n "My Awesome App" -i icon.ico --compress
 ```
 
 ## Templates
@@ -94,7 +94,7 @@ Interactive application with exposed Node.js functions and a polished UI.
 ### advanced
 Comprehensive template with multiple windows, file operations, and external assets.
 
-Use `ewv init --list-templates` to see all available templates.
+Use `ewvjs-cli init --list-templates` to see all available templates.
 
 ## License
 
