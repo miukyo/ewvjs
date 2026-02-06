@@ -16,7 +16,6 @@
   "files": [
     "dist/**/*",
     "native/**/*",
-    "src/csharp/bin/Release/**/*",
     "README.md",
     "LICENSE"
   ],
