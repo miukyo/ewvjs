@@ -14,6 +14,8 @@ export interface WindowOptions {
     html?: string;
     width?: number;
     height?: number;
+    min_width?: number;
+    min_height?: number;
     x?: number;
     y?: number;
     resizable?: boolean;

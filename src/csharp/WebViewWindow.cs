@@ -42,7 +42,7 @@ public static class EwvjsInterop
 
         var inputDict = new Dictionary<string, object>();
         var knownProperties = new[] { 
-            "title", "url", "html", "width", "height", "x", "y",
+            "title", "url", "html", "width", "height", "min_width", "min_height", "x", "y",
             "resizable", "fullscreen", "hidden", "frameless", "focus",
             "minimized", "maximized", "on_top", "confirm_close",
             "background_color", "transparent", "vibrancy", "dark_mode",
@@ -134,6 +134,12 @@ public class WebViewWindow : Form
         int width = options.ContainsKey("width") ? Convert.ToInt32(options["width"]) : 800;
         int height = options.ContainsKey("height") ? Convert.ToInt32(options["height"]) : 600;
         this.Size = new Size(width, height);
+
+        if (options.ContainsKey("min_width") || options.ContainsKey("min_height")) {
+            int minWidth = options.ContainsKey("min_width") ? Convert.ToInt32(options["min_width"]) : 0;
+            int minHeight = options.ContainsKey("min_height") ? Convert.ToInt32(options["min_height"]) : 0;
+            this.MinimumSize = new Size(minWidth, minHeight);
+        }
 
         if (options.ContainsKey("frameless") && (bool)options["frameless"]) this.FormBorderStyle = FormBorderStyle.None;
         else if (options.ContainsKey("resizable") && !(bool)options["resizable"]) {
@@ -439,6 +445,40 @@ public class WebViewWindow : Form
                 return promise;
             }));
 
+            c["setMinSize"] = JSValue.CreateFunction("setMinSize", new JSCallback((args) => {
+                var input = args.Length > 0 ? args[0] : JSValue.Undefined;
+                int w = 0, h = 0;
+                if (input.IsObject()) {
+                    var obj = (JSObject)input;
+                    var wVal = obj["width"]; if (!wVal.IsUndefined()) w = (int)wVal;
+                    var hVal = obj["height"]; if (!hVal.IsUndefined()) h = (int)hVal;
+                }
+                this.Invoke(new Action(() => this.MinimumSize = new Size(w, h)));
+                return JSValue.Undefined;
+            }));
+
+            c["getMinSize"] = JSValue.CreateFunction("getMinSize", new JSCallback((args) => {
+                var promise = JSValue.CreatePromise(out var deferred);
+                if (onMessageTsfn != null && tsfnValid) {
+                    Task.Run(() => {
+                        int width = 0, height = 0;
+                        this.Invoke(new Action(() => {
+                            width = this.MinimumSize.Width;
+                            height = this.MinimumSize.Height;
+                        }));
+                        onMessageTsfn.NonBlockingCall(() => {
+                            var result = JSValue.CreateObject();
+                            result["width"] = width;
+                            result["height"] = height;
+                            deferred.Resolve(result);
+                        });
+                    });
+                } else {
+                    deferred.Reject(new JSError("Window not initialized"));
+                }
+                return promise;
+            }));
+
             c["maximize"] = JSValue.CreateFunction("maximize", new JSCallback((args) => { this.Invoke(new Action(() => this.WindowState = FormWindowState.Maximized)); return JSValue.Undefined; }));
             c["minimize"] = JSValue.CreateFunction("minimize", new JSCallback((args) => { this.Invoke(new Action(() => this.WindowState = FormWindowState.Minimized)); return JSValue.Undefined; }));
             c["restore"] = JSValue.CreateFunction("restore", new JSCallback((args) => { this.Invoke(new Action(() => this.WindowState = FormWindowState.Normal)); return JSValue.Undefined; }));
@@ -579,7 +619,7 @@ public class WebViewWindow : Form
             await webView.EnsureCoreWebView2Async(environment);
 
             if ((options.ContainsKey("transparent") && (bool)options["transparent"]) || 
-                (options.ContainsKey("vibrancy") && (bool)options["vibrancy"]))
+                (!options.ContainsKey("vibrancy") || (bool)options["vibrancy"]))
             {
                 this.webView.DefaultBackgroundColor = Color.Transparent;
             }
@@ -788,7 +828,7 @@ public class WebViewWindow : Form
 
     private void ApplyVibrancy()
     {
-        if (this.options.ContainsKey("vibrancy") && (bool)this.options["vibrancy"]) {
+        if (!this.options.ContainsKey("vibrancy") || (bool)this.options["vibrancy"]) {
             this.BackColor = Color.FromArgb(1, 1, 1);
             var margins = new MARGINS { Left = -1, Right = -1, Top = -1, Bottom = -1 };
             DwmExtendFrameIntoClientArea(this.Handle, ref margins);

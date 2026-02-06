@@ -125,6 +125,14 @@ export class Window {
         return this._call('setSize', { width, height }); 
     }
 
+    async getMinSize() { return this._call('getMinSize'); }
+    async setMinSize(width: number, height: number) { 
+        return this._call('setMinSize', { width, height }); 
+    }
+    async set_min_size(width: number, height: number) { 
+        return this._call('setMinSize', { width, height }); 
+    }
+
     async getPosition() { return this._call('getPosition'); }
     async setPosition(x: number, y: number) { 
         return this._call('setPosition', { x, y }); 

@@ -101,6 +101,8 @@ Exposes a Node.js function to the frontend.
 {
     width?: number;              // Window width
     height?: number;             // Window height
+    min_width?: number;          // Minimum window width
+    min_height?: number;         // Minimum window height
     x?: number;                  // X position
     y?: number;                  // Y position
     resizable?: boolean;         // Allow resizing
@@ -114,7 +116,7 @@ Exposes a Node.js function to the frontend.
     confirm_close?: boolean;     // Require confirmation before closing
     transparent?: boolean;       // Transparent background
     background_color?: string;   // Hex color (e.g. "#FFFFFF")
-    vibrancy?: boolean;          // Enable window vibrancy/acrylic effect
+    vibrancy?: boolean;          // Enable window vibrancy/acrylic effect (default: true)
     dark_mode?: boolean;         // Enable dark mode
     title_bar?: boolean;         // Show/hide title bar (if not frameless)
     icon?: string;               // Path to .ico file
@@ -136,6 +138,7 @@ Once a window is created, you can control it using the returned `Window` instanc
 *   **State**: `maximize()`, `minimize()`, `restore()`, `hide()`, `focus()`, `show()`
 *   **Size & Position**:
     *   `getSize()`, `setSize(w, h)`, `resize(w, h)`
+    *   `getMinSize()`, `setMinSize(w, h)`, `set_min_size(w, h)`
     *   `getPosition()`, `setPosition(x, y)`, `move(x, y)`
 *   **Interaction**:
     *   `setTitle(title)`
