@@ -72,7 +72,7 @@ const itemsToCopy = [
 for (const item of itemsToCopy) {
     const src = path.join(sourcePath, item);
     const dest = path.join(targetPath, item);
-    
+
     if (fs.existsSync(src)) {
         copyRecursive(src, dest);
         // console.log(`✓ Copied ${item}`);
@@ -86,11 +86,29 @@ for (const item of itemsToCopy) {
 const nodeApiDotnetSrc = path.join(__dirname, '..', 'node_modules', 'node-api-dotnet');
 const nodeApiDotnetDest = path.join(targetPath, 'node_modules', 'node-api-dotnet');
 
+// Cherry pick specific files/folders from node-api-dotnet
+const nodeApiDotnetItems = ['win-arm64', 'win-x64', 'net10.0', 'net10.0.js', 'net9.0', 'net9.0.js', 'init.js', 'index.js'];
+
 if (fs.existsSync(nodeApiDotnetSrc)) {
-    copyRecursive(nodeApiDotnetSrc, nodeApiDotnetDest);
-    // console.log('✓ Copied node-api-dotnet module');
+    for (const item of nodeApiDotnetItems) {
+        const src = path.join(nodeApiDotnetSrc, item);
+        const dest = path.join(nodeApiDotnetDest, item);
+
+        if (fs.existsSync(src)) {
+            copyRecursive(src, dest);
+        } else {
+            console.warn(`⚠ Warning: ${item} not found in node-api-dotnet`);
+        }
+    }
 } else {
     console.warn('⚠ Warning: node-api-dotnet module not found');
 }
+
+// if (fs.existsSync(nodeApiDotnetSrc)) {
+//     copyRecursive(nodeApiDotnetSrc, nodeApiDotnetDest);
+//     // console.log('✓ Copied node-api-dotnet module');
+// } else {
+//     console.warn('⚠ Warning: node-api-dotnet module not found');
+// }
 
 console.log('Native binaries copied successfully!');
