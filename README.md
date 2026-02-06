@@ -236,7 +236,6 @@ npx ewvjs-cli package <entry> [options]
 | `--assets <dir>` | `-a` | Assets directory to include in package | `./assets` |
 | `--target <target>` | `-t` | Target platform | `node18-win-x64` |
 | `--modules <modules>` | `-m` | Additional node modules to bundle (comma-separated) | None |
-| `--compress` | | Compress executable with UPX | `false` |
 | `--no-native` | | Skip bundling native DLLs (if already included) | Includes by default |
 
 **Examples:**
