@@ -1,6 +1,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const archiver = require('archiver');
 const { bundleAssets } = require('./assets');
 const { setIcon } = require('./icon');
 
@@ -171,7 +172,7 @@ async function packageApp(config) {
     '--target', target,
     '--output', outputPath,
     '--public',  // Faster, includes sources
-    '--no-bytecode'  // Skip bytecode generation for faster packaging
+    '--no-bytecode',  // Skip bytecode generation for faster packaging
   ];
 
   if (compress) {
@@ -319,6 +320,12 @@ async function packageApp(config) {
     console.log('   ✓ Icon applied');
   }
 
+  // Step 5: Create ZIP archive
+  console.log('\n📦 Step 5: Creating archive...');
+  const archivePath = path.join(outputDir, `${output}.zip`);
+  await createArchive(outputDir, archivePath);
+  console.log(`   ✓ Archive saved to ${archivePath}`);
+
   return outputPath;
 }
 
@@ -342,6 +349,49 @@ function copyRecursive(src, dest) {
       fs.copyFileSync(srcPath, destPath);
     }
   }
+}
+
+/**
+ * Create a ZIP archive of the dist folder
+ * @param {string} sourceDir - Source directory to archive
+ * @param {string} outputPath - Output ZIP file path
+ * @returns {Promise<void>}
+ */
+function createArchive(sourceDir, outputPath) {
+  return new Promise((resolve, reject) => {
+    const output = fs.createWriteStream(outputPath);
+    const archive = archiver('zip', {
+      zlib: { level: 9 } // Maximum compression
+    });
+
+    output.on('close', () => {
+      const sizeMB = (archive.pointer() / 1024 / 1024).toFixed(2);
+      console.log(`   ✓ Archive created: ${sizeMB} MB`);
+      resolve();
+    });
+
+    archive.on('error', (err) => {
+      reject(err);
+    });
+
+    archive.on('warning', (err) => {
+      if (err.code === 'ENOENT') {
+        console.warn(`   ⚠ Warning: ${err.message}`);
+      } else {
+        reject(err);
+      }
+    });
+
+    archive.pipe(output);
+
+    // Add all files from the source directory, excluding the output archive
+    const outputFileName = path.basename(outputPath);
+    archive.directory(sourceDir, false, (entry) => {
+      return entry.name !== outputFileName ? entry : false;
+    });
+
+    archive.finalize();
+  });
 }
 
 module.exports = packageApp;

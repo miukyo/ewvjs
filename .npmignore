@@ -18,8 +18,7 @@ docs/
 # Build artifacts (intermediate)
 *.pdb
 obj/
-src/csharp/
-!src/csharp/bin/
+packages/
 
 # Keep only what's needed in package
 !dist/

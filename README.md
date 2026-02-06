@@ -133,7 +133,7 @@ Exposes a Node.js function to the frontend.
 Once a window is created, you can control it using the returned `Window` instance:
 
 *   **Lifecycle**: `run()`, `close()`, `destroy()`
-*   **State**: `maximize()`, `minimize()`, `restore()`, `hide()`
+*   **State**: `maximize()`, `minimize()`, `restore()`, `hide()`, `focus()`, `show()`
 *   **Size & Position**:
     *   `getSize()`, `setSize(w, h)`, `resize(w, h)`
     *   `getPosition()`, `setPosition(x, y)`, `move(x, y)`

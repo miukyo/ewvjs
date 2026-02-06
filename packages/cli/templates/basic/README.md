@@ -1,4 +1,4 @@
-# my-ewvjs-app
+# {{PROJECT_NAME}}
 
 A ewvjs application.
 
@@ -27,4 +27,4 @@ npm run package
 
 ## Documentation
 
-Visit [ewvjs documentation](https://github.com/your-repo/ewvjs) for more information.
+Visit [ewvjs documentation](https://github.com/miukyo/ewvjs) for more information.

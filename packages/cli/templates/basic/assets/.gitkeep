@@ -1,0 +1,9 @@
+# Assets Directory
+
+Place your static assets here:
+- Images
+- Fonts
+- Additional CSS files
+- Additional JavaScript files
+
+These assets will be included when you package your application.

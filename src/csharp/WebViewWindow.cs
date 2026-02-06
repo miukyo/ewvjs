@@ -641,7 +641,6 @@ public class WebViewWindow : Form
             if (completedTask == messageTask) {
                 resultStr = await messageTask;
             }
-                    Console.WriteLine("Custom context menu items: " + resultStr.ToString());
 
             // Parse custom menu items first
             bool hasCustomMenu = false;
@@ -701,6 +700,8 @@ public class WebViewWindow : Form
 
     private void PopulateCustomContextMenu(object[] menuItems, IList<CoreWebView2ContextMenuItem> menuList)
     {
+        if (webView?.CoreWebView2?.Environment == null) return;
+        
         foreach (var itemObj in menuItems) {
             if (!(itemObj is Dictionary<string, object> item)) continue;
             string type = item.ContainsKey("type") ? (string)item["type"] : "normal";

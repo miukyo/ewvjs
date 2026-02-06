@@ -1,13 +1,14 @@
 {
-  "name": "my-ewvjs-app",
+  "name": "{{PROJECT_NAME}}",
   "version": "1.0.0",
   "description": "My ewvjs application",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "package": "ewvjs package app.js -o myapp -n \"My App\""
+    "package": "ewv package app.js -o myapp -n \"My App\""
   },
   "dependencies": {
-    "ewvjs": "file:../.."
+    "ewvjs": "^1.0.0",
+    "ewvjs-cli: "^1.0.0"
   }
 }

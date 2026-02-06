@@ -1,0 +1,48 @@
+{
+  "name": "ewvjs-cli",
+  "version": "1.0.0",
+  "description": "CLI tool for packaging ewvjs applications",
+  "main": "./index.js",
+  "bin": {
+    "ewvjs": "./bin/ewvjs-cli.js"
+  },
+  "files": [
+    "bin/**/*",
+    "lib/**/*",
+    "templates/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ewvjs",
+    "webview",
+    "webview2",
+    "cli",
+    "packaging",
+    "electron-alternative"
+  ],
+  "author": "miukyo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/miukyo/ewvjs",
+    "directory": "packages/cli"
+  },
+  "type": "commonjs",
+  "os": [
+    "win32"
+  ],
+  "dependencies": {
+    "@inquirer/prompts": "^8.2.0",
+    "@yao-pkg/pkg": "^6.12.0",
+    "archiver": "^7.0.1",
+    "commander": "^12.1.0",
+    "resedit": "^2.0.2"
+  },
+  "peerDependencies": {
+    "ewvjs": "^1.0.0"
+  }
+}

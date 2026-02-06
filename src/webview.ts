@@ -93,7 +93,12 @@ export class WebView {
             ...options
         };
 
-        if (url_or_html.startsWith('http') || url_or_html.startsWith('data:')) {
+        const urlRegex = /^(https?|file|data):/i;
+        const isUrl = urlRegex.test(url_or_html) || 
+                  /^localhost(:\d+)?$/i.test(url_or_html) ||
+                  /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/i.test(url_or_html);
+        
+        if (isUrl) {
             opts.url = url_or_html;
         } else {
             opts.html = url_or_html;

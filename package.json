@@ -2,11 +2,11 @@
   "name": "ewvjs",
   "version": "1.0.1",
   "description": "Embedded WebView for JavaScript - Edge WebView2 bindings for Node.js",
+  "workspaces": [
+    "packages/*"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "ewvjs": "./bin/ewvjs-cli.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -16,8 +16,6 @@
   "files": [
     "dist/**/*",
     "native/**/*",
-    "bin/**/*",
-    "lib/**/*",
     "src/csharp/bin/Release/**/*",
     "README.md",
     "LICENSE"
@@ -52,10 +50,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@yao-pkg/pkg": "^6.12.0",
-    "archiver": "^7.0.1",
-    "commander": "^12.1.0",
-    "node-api-dotnet": "^0.9.19",
-    "resedit": "^2.0.2"
+    "node-api-dotnet": "^0.9.19"
   }
 }
