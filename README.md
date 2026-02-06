@@ -174,14 +174,14 @@ win.on_context_menu = (params) => {
 
 ## CLI Reference
 
-`ewvjs` provides a command-line interface for creating and packaging applications.
+`ewvjs-cli` provides a command-line interface for creating and packaging applications.
 
 ### Installation
 
-The CLI is included with the `ewvjs` package and can be run using `npx`:
+The CLI is included with the `ewvjs-cli` package and can be run using `npx`:
 
 ```bash
-npx ewvjs <command> [options]
+npx ewvjs-cli <command> [options]
 ```
 
 ### Commands
@@ -192,7 +192,7 @@ Create a new ewvjs project with a sample application structure.
 
 **Usage:**
 ```bash
-npx ewvjs init [name]
+npx ewvjs-cli init [name]
 ```
 
 **Arguments:**
@@ -200,7 +200,7 @@ npx ewvjs init [name]
 
 **Example:**
 ```bash
-npx ewvjs init my-awesome-app
+npx ewvjs-cli init my-awesome-app
 cd my-awesome-app
 npm install
 npm start
@@ -220,7 +220,7 @@ Package your ewvjs application into a standalone executable.
 
 **Usage:**
 ```bash
-npx ewvjs package <entry> [options]
+npx ewvjs-cli package <entry> [options]
 ```
 
 **Arguments:**
@@ -243,12 +243,12 @@ npx ewvjs package <entry> [options]
 
 Basic packaging:
 ```bash
-npx ewvjs package app.js
+npx ewvjs-cli package app.js
 ```
 
 Full customization:
 ```bash
-npx ewvjs package app.js \
+npx ewvjs-cli package app.js \
   --output myapp \
   --name "My Application" \
   --icon icon.ico \
@@ -259,7 +259,7 @@ npx ewvjs package app.js \
 
 Package with custom target:
 ```bash
-npx ewvjs package app.js -o myapp -t node20-win-x64
+npx ewvjs-cli package app.js -o myapp -t node20-win-x64
 ```
 
 **Output:**
@@ -279,14 +279,14 @@ The packaged application will be created in the `dist/` directory with:
 
 Display available commands and options:
 ```bash
-npx ewvjs --help
-npx ewvjs package --help
-npx ewvjs init --help
+npx ewvjs-cli --help
+npx ewvjs-cli package --help
+npx ewvjs-cli init --help
 ```
 
 Display version:
 ```bash
-npx ewvjs --version
+npx ewvjs-cli --version
 ```
 
 ## License
