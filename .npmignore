@@ -23,5 +23,3 @@ packages/
 # Keep only what's needed in package
 !dist/
 !native/
-!bin/
-!lib/
