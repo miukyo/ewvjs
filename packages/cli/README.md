@@ -31,14 +31,8 @@ ewvjs-cli init my-app
 With a specific template:
 
 ```bash
-# Minimal template (simple Hello World)
-ewvjs-cli init my-app --template minimal
-
 # Basic template (default - interactive with APIs)
 ewvjs-cli init my-app --template basic
-
-# Advanced template (multiple windows, file operations)
-ewvjs-cli init my-app --template advanced
 ```
 
 ### Package your application
@@ -72,29 +66,11 @@ npm install
 npm start
 
 # Create with a specific template
-ewvjs-cli init simple-app --template minimal
-
-# Create an advanced app
-ewvjs-cli init pro-app --template advanced
+ewvjs-cli init simple-app --template basic
 
 # Package for distribution
 ewvjs-cli package app.js -o MyAwesomeApp -n "My Awesome App" -i icon.ico --compress
 ```
-
-## Templates
-
-ewvjs-cli includes three project templates:
-
-### minimal
-A simple "Hello World" template - perfect for quick testing.
-
-### basic (default)
-Interactive application with exposed Node.js functions and a polished UI.
-
-### advanced
-Comprehensive template with multiple windows, file operations, and external assets.
-
-Use `ewvjs-cli init --list-templates` to see all available templates.
 
 ## License
 
