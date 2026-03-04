@@ -1,8 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const NtExecutable = require('resedit').NtExecutable;
-const NtExecutableResource = require('resedit').NtExecutableResource;
-const Resource = require('resedit').Resource;
+import fs from 'fs';
+import path from 'path';
+import { NtExecutable, NtExecutableResource, Resource } from 'resedit';
 
 /**
  * Set icon and metadata for Windows executable
@@ -143,7 +141,7 @@ async function extractIcon(exePath, outputPath) {
   }
 }
 
-module.exports = {
+export {
   setIcon,
   validateIcon,
   extractIcon

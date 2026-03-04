@@ -1,16 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net472-windows</TargetFramework>
+    <LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>MSB3277</NoWarn>
+    <GenerateDependencyFile>true</GenerateDependencyFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.JavaScript.NodeApi" Version="0.9.19" />
     <PackageReference Include="Microsoft.JavaScript.NodeApi.Generator" Version="0.9.19" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3719.77" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
 
 </Project>

@@ -1,107 +1,177 @@
-const fs = require('fs');
-const path = require('path');
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from 'url';
 
-// Determine which .NET version to use (prefer net10.0-windows if exists, otherwise net9.0-windows)
-const sourceBasePath = path.join(__dirname, '..', 'src', 'csharp', 'bin', 'Release');
-let sourcePath;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-if (fs.existsSync(path.join(sourceBasePath, 'net10.0-windows'))) {
-    sourcePath = path.join(sourceBasePath, 'net10.0-windows');
-    console.log('Using .NET 10.0 native binaries');
-} else if (fs.existsSync(path.join(sourceBasePath, 'net9.0-windows'))) {
-    sourcePath = path.join(sourceBasePath, 'net9.0-windows');
-    console.log('Using .NET 9.0 native binaries');
-} else {
-    console.error('Error: No compiled native binaries found. Please build the C# project first.');
-    console.error('Run: dotnet build src/csharp/WebView.csproj -c Release');
-    process.exit(1);
+// Helper function to match glob patterns
+function matchGlob(pattern, filename) {
+	const regexPattern = pattern
+		.replace(/\./g, "\\.")
+		.replace(/\*/g, ".*")
+		.replace(/\?/g, ".");
+	const regex = new RegExp(`^${regexPattern}$`, "i");
+	return regex.test(filename);
 }
 
-const targetPath = path.join(__dirname, '..', 'native');
+// Helper function to expand glob patterns
+function expandGlob(basePath, pattern) {
+	if (!pattern.includes("*") && !pattern.includes("?")) {
+		// Not a glob pattern, return as-is
+		return [pattern];
+	}
+
+	try {
+		const files = fs.readdirSync(basePath);
+		return files.filter((file) => matchGlob(pattern, file));
+	} catch (err) {
+		return [];
+	}
+}
+
+// Determine which .NET version to use (prefer net48-windows if exists, otherwise net472-windows)
+const sourceBasePath = path.join(
+	__dirname,
+	"..",
+	"src",
+	"csharp",
+	"bin",
+	"Release",
+);
+let sourcePath;
+
+if (fs.existsSync(path.join(sourceBasePath, "net472-windows"))) {
+	sourcePath = path.join(sourceBasePath, "net472-windows");
+	console.log("Using .NET Framework 4.7.2 native binaries");
+} else {
+	console.error(
+		"Error: No compiled native binaries found. Please build the C# project first.",
+	);
+	console.error("Run: dotnet build src/csharp/WebView.csproj -c Release");
+	process.exit(1);
+}
+
+const targetPath = path.join(__dirname, "..", "native");
 
 // Create target directory if it doesn't exist
 if (!fs.existsSync(targetPath)) {
-    fs.mkdirSync(targetPath, { recursive: true });
+	fs.mkdirSync(targetPath, { recursive: true });
 }
 
 // Also create dist/js directory for api.js
-const distJsPath = path.join(__dirname, '..', 'dist', 'js');
+const distJsPath = path.join(__dirname, "..", "dist", "js");
 if (!fs.existsSync(distJsPath)) {
-    fs.mkdirSync(distJsPath, { recursive: true });
+	fs.mkdirSync(distJsPath, { recursive: true });
 }
 
 // Copy api.js to dist/js
-const apiJsSrc = path.join(__dirname, '..', 'src', 'js', 'api.js');
-const apiJsDest = path.join(distJsPath, 'api.js');
+const apiJsSrc = path.join(__dirname, "..", "src", "js", "api.js");
+const apiJsDest = path.join(distJsPath, "api.js");
 if (fs.existsSync(apiJsSrc)) {
-    fs.copyFileSync(apiJsSrc, apiJsDest);
-    // console.log('✓ Copied api.js to dist/js');
+	fs.copyFileSync(apiJsSrc, apiJsDest);
+	// console.log('✓ Copied api.js to dist/js');
 }
 
 // Copy function
 function copyRecursive(src, dest) {
-    if (fs.statSync(src).isDirectory()) {
-        if (!fs.existsSync(dest)) {
-            fs.mkdirSync(dest, { recursive: true });
-        }
-        const entries = fs.readdirSync(src);
-        for (const entry of entries) {
-            copyRecursive(path.join(src, entry), path.join(dest, entry));
-        }
-    } else {
-        fs.copyFileSync(src, dest);
-    }
+	if (fs.statSync(src).isDirectory()) {
+		if (!fs.existsSync(dest)) {
+			fs.mkdirSync(dest, { recursive: true });
+		}
+		const entries = fs.readdirSync(src);
+		for (const entry of entries) {
+			copyRecursive(path.join(src, entry), path.join(dest, entry));
+		}
+	} else {
+		fs.copyFileSync(src, dest);
+	}
 }
 
 // Files and directories to copy
 const itemsToCopy = [
-    'WebView.dll',
-    'WebView.cjs',
-    'WebView.mjs',
-    'WebView.d.ts',
-    'WebView.deps.json',
-    'import.cjs',
-    'Microsoft.Web.WebView2.Core.dll',
-    'Microsoft.Web.WebView2.WinForms.dll',
-    'Microsoft.Web.WebView2.Wpf.dll',
-    'runtimes'
+	"WebView.dll",
+	"WebView.cjs",
+	"WebView.mjs",
+	"WebView.d.ts",
+	"WebView.deps.json",
+	"import.cjs",
+	"Microsoft.Web.WebView2.Core.dll",
+	"Microsoft.Web.WebView2.WinForms.dll",
+	"Microsoft.Web.WebView2.Wpf.dll",
+    "System.*.dll",
+    "Microsoft.Bcl.AsyncInterfaces.dll",
+	"runtimes",
 ];
 
 // console.log(`Copying native binaries from ${sourcePath} to ${targetPath}...`);
 
 for (const item of itemsToCopy) {
-    const src = path.join(sourcePath, item);
-    const dest = path.join(targetPath, item);
+	// Expand glob patterns
+	const expandedItems = expandGlob(sourcePath, item);
 
-    if (fs.existsSync(src)) {
-        copyRecursive(src, dest);
-        // console.log(`✓ Copied ${item}`);
-    } else {
-        console.warn(`⚠ Warning: ${item} not found at ${src}`);
-    }
+	if (expandedItems.length === 0) {
+		// Not a glob or no matches found, try copying directly
+		const src = path.join(sourcePath, item);
+		const dest = path.join(targetPath, item);
+
+		if (fs.existsSync(src)) {
+			copyRecursive(src, dest);
+			// console.log(`✓ Copied ${item}`);
+		} else {
+			console.warn(`⚠ Warning: ${item} not found at ${src}`);
+		}
+	} else {
+		// Copy all matched files
+		for (const matchedItem of expandedItems) {
+			const src = path.join(sourcePath, matchedItem);
+			const dest = path.join(targetPath, matchedItem);
+
+			if (fs.existsSync(src)) {
+				copyRecursive(src, dest);
+				// console.log(`✓ Copied ${matchedItem}`);
+			}
+		}
+	}
 }
 
 // Copy node-api-dotnet module
 // console.log('Copying node-api-dotnet module...');
-const nodeApiDotnetSrc = path.join(__dirname, '..', 'node_modules', 'node-api-dotnet');
-const nodeApiDotnetDest = path.join(targetPath, 'node_modules', 'node-api-dotnet');
+const nodeApiDotnetSrc = path.join(
+	__dirname,
+	"..",
+	"node_modules",
+	"node-api-dotnet",
+);
+const nodeApiDotnetDest = path.join(
+	targetPath,
+	"node_modules",
+	"node-api-dotnet",
+);
 
 // Cherry pick specific files/folders from node-api-dotnet
-const nodeApiDotnetItems = ['win-arm64', 'win-x64', 'net10.0', 'net10.0.js', 'net9.0', 'net9.0.js', 'init.js', 'index.js'];
+const nodeApiDotnetItems = [
+	"win-arm64",
+	"win-x64",
+	"net472",
+	"net472.js",
+	"init.js",
+	"index.js",
+];
 
 if (fs.existsSync(nodeApiDotnetSrc)) {
-    for (const item of nodeApiDotnetItems) {
-        const src = path.join(nodeApiDotnetSrc, item);
-        const dest = path.join(nodeApiDotnetDest, item);
+	for (const item of nodeApiDotnetItems) {
+		const src = path.join(nodeApiDotnetSrc, item);
+		const dest = path.join(nodeApiDotnetDest, item);
 
-        if (fs.existsSync(src)) {
-            copyRecursive(src, dest);
-        } else {
-            console.warn(`⚠ Warning: ${item} not found in node-api-dotnet`);
-        }
-    }
+		if (fs.existsSync(src)) {
+			copyRecursive(src, dest);
+		} else {
+			console.warn(`⚠ Warning: ${item} not found in node-api-dotnet`);
+		}
+	}
 } else {
-    console.warn('⚠ Warning: node-api-dotnet module not found');
+	console.warn("⚠ Warning: node-api-dotnet module not found");
 }
 
 // if (fs.existsSync(nodeApiDotnetSrc)) {
@@ -111,4 +181,4 @@ if (fs.existsSync(nodeApiDotnetSrc)) {
 //     console.warn('⚠ Warning: node-api-dotnet module not found');
 // }
 
-console.log('Native binaries copied successfully!');
+console.log("Native binaries copied successfully!");

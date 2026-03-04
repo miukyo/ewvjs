@@ -25,14 +25,14 @@ if (isPkg) {
 }
 
 // Export types
-export * from './types';
+export * from './types.js';
 
 // Export classes
-export { WebView } from './webview';
-export { Window } from './window';
+export { WebView } from './webview.js';
+export { Window } from './window.js';
 
 // Create and export singleton instance
-import { WebView } from './webview';
+import { WebView } from './webview.js';
 
 const ewvjs = new WebView();
 export default ewvjs;

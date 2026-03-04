@@ -1,5 +1,9 @@
-const { create_window, start, expose } = require('ewvjs');
-const path = require('path');
+import { create_window, start, expose } from 'ewvjs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 expose('greet', (name) => {
   return `Hello, ${name}! This is from Node.js 🚀`;
@@ -18,7 +22,6 @@ expose('getSystemInfo', () => {
 const window = create_window('Hello ewvjs', `file://${path.resolve('assets/index.html')}`, {
   width: 800,
   height: 600,
-  vibrancy: true,
   debug: true
 });
 

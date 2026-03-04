@@ -18,15 +18,44 @@ using System.Text.Json;
 [JSExport]
 public static class EwvjsInterop
 {
+    private static bool assemblyResolverRegistered = false;
+
     [JSExport]
     public static JSValue Invoke(JSValue inputVal)
     {
         try 
         {
-             Assembly.Load("Microsoft.Web.WebView2.WinForms");
+             // Preload all WebView2 and dependent assemblies on the JS thread
              Assembly.Load("Microsoft.Web.WebView2.Core");
+             Assembly.Load("Microsoft.Web.WebView2.WinForms");
+             Assembly.Load("Microsoft.Web.WebView2.Wpf");
+             Assembly.Load("System.Text.Json");
+             Assembly.Load("System.Text.Encodings.Web");
+             Assembly.Load("System.Buffers");
+             Assembly.Load("System.Memory");
+             Assembly.Load("System.Runtime.CompilerServices.Unsafe");
         }
-        catch (Exception ex) { Console.WriteLine("Warning: Failed to preload WebView2 assemblies: " + ex.Message); }
+        catch (Exception ex) { Console.WriteLine("Warning: Failed to preload assemblies: " + ex.Message); }
+
+        // Set up assembly resolver to avoid JS thread issues (only once)
+        if (!assemblyResolverRegistered)
+        {
+            AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
+            {
+                try
+                {
+                    string assemblyName = new AssemblyName(args.Name).Name ?? "";
+                    string assemblyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, assemblyName + ".dll");
+                    if (File.Exists(assemblyPath))
+                    {
+                        return Assembly.LoadFrom(assemblyPath);
+                    }
+                }
+                catch { }
+                return null;
+            };
+            assemblyResolverRegistered = true;
+        }
 
         JSObject input;
         try {
@@ -104,13 +133,13 @@ public static class EwvjsInterop
 
 public class WebViewWindow : Form
 {
-    private WebView2 webView;
+    private WebView2? webView;
     private IDictionary<string, object> options;
     private JSReference? onMessageRef;
     private JSThreadSafeFunction? onMessageTsfn;
     private volatile bool tsfnValid = false;
     private JSPromise.Deferred onReadyDeferred;
-    private string userDataPath;
+    private string? userDataPath;
     private bool isAnonymous;
 
     [DllImport("dwmapi.dll")]
@@ -308,7 +337,7 @@ public class WebViewWindow : Form
                         try {
                             string? result = null;
                             await RunOnUI(async () => {
-                                result = await this.webView.ExecuteScriptAsync(script);
+                                result = this.webView != null ? await this.webView.ExecuteScriptAsync(script) : null;
                             });
                             onMessageTsfn.NonBlockingCall(() => {
                                 JSValue jsResult = result != null ? (JSValue)result : JSValue.Null;
@@ -333,7 +362,7 @@ public class WebViewWindow : Form
 
             c["setTitle"] = JSValue.CreateFunction("setTitle", new JSCallback((args) => {
                 var input = args.Length > 0 ? args[0] : JSValue.Undefined;
-                var title = input.IsString() ? (string)input : input.ToString();
+                var title = input.IsString() ? (string)input : input.ToString() ?? "";
                 this.Invoke(new Action(() => {
                     options["title"] = title;
                     if (!(this.options.ContainsKey("title_bar") && !(bool)this.options["title_bar"])) {
@@ -495,9 +524,9 @@ public class WebViewWindow : Form
                         try {
                             List<Dictionary<string, object>>? cookies = null;
                             await RunOnUI(async () => {
-                                var list = await this.webView.CoreWebView2.CookieManager.GetCookiesAsync(url);
+                                var list = this.webView?.CoreWebView2?.CookieManager != null ? await this.webView.CoreWebView2.CookieManager.GetCookiesAsync(url) : null;
                                 cookies = new List<Dictionary<string, object>>();
-                                foreach(var ck in list) {
+                                if (list != null) foreach(var ck in list) {
                                     var d = new Dictionary<string, object>();
                                     d["name"] = ck.Name;
                                     d["value"] = ck.Value;
@@ -528,15 +557,15 @@ public class WebViewWindow : Form
             c["setCookie"] = JSValue.CreateFunction("setCookie", new JSCallback((args) => {
                 var input = args.Length > 0 ? args[0] : JSValue.Undefined;
                 var promise = JSValue.CreatePromise(out var deferred);
-                string? name = GetProp<string>(input, "name", null);
-                string? value = GetProp<string>(input, "value", null);
-                string? domain = GetProp<string>(input, "domain", null);
-                string? path = GetProp<string>(input, "path", null);
+                string? name = GetProp<string?>(input, "name", null);
+                string? value = GetProp<string?>(input, "value", null);
+                string? domain = GetProp<string?>(input, "domain", null);
+                string? path = GetProp<string?>(input, "path", null);
                 if (onMessageTsfn != null && tsfnValid) {
                     Task.Run(async () => {
                         try {
                             await RunOnUI(async () => {
-                                if (name != null && value != null && domain != null) {
+                                if (name != null && value != null && domain != null && this.webView?.CoreWebView2?.CookieManager != null) {
                                     var cookie = this.webView.CoreWebView2.CookieManager.CreateCookie(name, value, domain, path ?? "/");
                                     this.webView.CoreWebView2.CookieManager.AddOrUpdateCookie(cookie);
                                 }
@@ -561,7 +590,7 @@ public class WebViewWindow : Form
                 if (onMessageTsfn != null && tsfnValid) {
                     Task.Run(async () => {
                         try {
-                            await RunOnUI(async () => { this.webView.CoreWebView2.CookieManager.DeleteAllCookies(); });
+                            await RunOnUI(async () => { this.webView?.CoreWebView2?.CookieManager?.DeleteAllCookies(); });
                             onMessageTsfn.NonBlockingCall(() => {
                                 deferred.Resolve(JSValue.Undefined);
                             });
@@ -595,8 +624,8 @@ public class WebViewWindow : Form
             this.Controls.Add(this.webView);
             
             bool persist = false;
-            string customPath = null;
-            string envName = null;
+            string? customPath = null;
+            string? envName = null;
             if (options.ContainsKey("session") && options["session"] is Dictionary<string, object> sess) {
                 if (sess.ContainsKey("persist")) persist = (bool)sess["persist"];
                 if (sess.ContainsKey("path")) customPath = (string)sess["path"];
@@ -628,7 +657,10 @@ public class WebViewWindow : Form
                 await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync((string)options["initScript"]);
 
             webView.CoreWebView2.WebMessageReceived += CoreWebView2_WebMessageReceived;
-            webView.CoreWebView2.NewWindowRequested += (s, e) => { e.Handled = true; }; 
+            webView.CoreWebView2.NewWindowRequested += (s, e) => { e.Handled = true; };
+            webView.CoreWebView2.DOMContentLoaded += (s, e) => {
+                Task.Run(() => SendMessageAsync("[\"dom_ready\", \"\"]"));
+            }; 
 
             bool debugEnabled = !options.ContainsKey("debug") || (bool)options["debug"];
             
@@ -711,7 +743,7 @@ public class WebViewWindow : Form
         switch(el.ValueKind) {
             case JsonValueKind.Array: return el.EnumerateArray().Select(x => ConvertJsonElementToStructure(x)).ToArray();
             case JsonValueKind.Object:
-                 var dict = new Dictionary<string, object>();
+                 var dict = new Dictionary<string, object?>();
                  foreach(var prop in el.EnumerateObject()) dict[prop.Name] = ConvertJsonElementToStructure(prop.Value);
                  return dict;
             case JsonValueKind.String: return el.GetString();
@@ -762,7 +794,7 @@ public class WebViewWindow : Form
             }
 
             if (item.ContainsKey("submenu")) {
-                object[] opts = null;
+                object[]? opts = null;
                 if (item["submenu"] is object[]) opts = (object[])item["submenu"];
                 else if (item["submenu"] is List<object> l) opts = l.ToArray();
                 if (opts != null) PopulateCustomContextMenu(opts, newItem.Children);

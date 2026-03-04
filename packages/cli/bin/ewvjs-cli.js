@@ -1,19 +1,25 @@
 #!/usr/bin/env node
 
-const { Command } = require('commander');
-const path = require('path');
-const fs = require('fs');
-const { input, select } = require('@inquirer/prompts');
-const packageApp = require('../lib/packager');
-const { setIcon } = require('../lib/icon');
-const { getAvailableTemplates, copyTemplate, isValidTemplate } = require('../lib/templates');
+import { Command } from 'commander';
+import path from 'path';
+import fs from 'fs';
+import { input, select } from '@inquirer/prompts';
+import packageApp from '../lib/packager.js';
+import { setIcon } from '../lib/icon.js';
+import { getAvailableTemplates, copyTemplate, isValidTemplate } from '../lib/templates.js';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
 
 const program = new Command();
 
 program
   .name('ewv')
   .description('CLI tool for packaging ewvjs applications')
-  .version(require('../package.json').version);
+  .version(JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf-8')).version);
 
 program
   .command('package')

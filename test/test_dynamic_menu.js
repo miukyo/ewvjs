@@ -1,4 +1,4 @@
-const { create_window, start } = require('../dist/index');
+import { create_window, start } from '../dist/index.js';
 
 async function runTests() {
     console.log("Starting Dynamic Context Menu verification...");

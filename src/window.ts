@@ -1,315 +1,367 @@
-import { ContextMenuItem, WindowOptions } from './types';
-import { getParamNames, generateId } from './utils';
+import { ContextMenuItem, WindowOptions } from "./types.js";
+import { getParamNames, generateId } from "./utils.js";
 
 export class Window {
-    platform: any;
-    options: WindowOptions;
+	platform: any;
+	options: WindowOptions;
 
-    private controller: any;
-    private _closedPromise: Promise<void>;
-    private _resolveClosed!: () => void;
-    private _menuCallbacks: Map<string, () => void> = new Map();
-    private _exposedFunctions: { [key: string]: Function };
-    private _isClosed: boolean = false;
+	private controller: any;
+	private _closedPromise: Promise<void>;
+	private _resolveClosed!: () => void;
+	private _menuCallbacks: Map<string, () => void> = new Map();
+	private _exposedFunctions: { [key: string]: Function };
+	private _isClosed: boolean = false;
+	private _pendingApiInjection: string | null = null;
 
-    on_context_menu: (items: any[]) => ContextMenuItem[] | null | Promise<ContextMenuItem[] | null> = () => null;
+	on_context_menu: (
+		items: any[],
+	) => ContextMenuItem[] | null | Promise<ContextMenuItem[] | null> = () =>
+		null;
 
-    constructor(platform: any, options: WindowOptions, exposedFunctions: { [key: string]: Function }) {
-        this.platform = platform;
-        this.options = { ...options };
-        this._exposedFunctions = exposedFunctions;
+	constructor(
+		platform: any,
+		options: WindowOptions,
+		exposedFunctions: { [key: string]: Function },
+	) {
+		this.platform = platform;
+		this.options = { ...options };
+		this._exposedFunctions = exposedFunctions;
 
-        this._closedPromise = new Promise((resolve) => {
-            this._resolveClosed = resolve;
-        });
+		this._closedPromise = new Promise((resolve) => {
+			this._resolveClosed = resolve;
+		});
 
-        const originalCallback = this.options.jsCallback;
-        this.options.jsCallback = async (msg) => {
-            const result = await this._on_message(msg, this._exposedFunctions);
-            if (originalCallback) await originalCallback(msg);
-            return result;
-        };
-    }
+		const originalCallback = this.options.jsCallback;
+		this.options.jsCallback = async (msg) => {
+			const result = await this._on_message(msg, this._exposedFunctions);
+			if (originalCallback) await originalCallback(msg);
+			return result;
+		};
+	}
 
-    get closed() {
-        return this._closedPromise;
-    }
+	get closed() {
+		return this._closedPromise;
+	}
 
-    get is_closed() {
-        return this._isClosed;
-    }
+	get is_closed() {
+		return this._isClosed;
+	}
 
-    async run() {
-        this.controller = await this.platform.createWindow(this.options);
-        
-        // Inject exposed functions API
-        const funcList = Object.keys(this._exposedFunctions).map(name => {
-            return { func: name, params: getParamNames(this._exposedFunctions[name]) };
-        });
+	async run() {
+		this.controller = await this.platform.createWindow(this.options);
 
-        if (funcList.length > 0) {
-            const code = `if (window.ewvjs) { window.ewvjs._createApi(${JSON.stringify(funcList)}); }`;
-            setTimeout(() => this.evaluate_js(code).catch((err) => { 
-                console.error('Failed to inject exposed functions API:', err);
-            }), 500);
-        }
+		// Inject exposed functions API after DOM is ready
+		const funcList = Object.keys(this._exposedFunctions).map((name) => {
+			return {
+				func: name,
+				params: getParamNames(this._exposedFunctions[name]),
+			};
+		});
 
-        return this.controller;
-    }
+		if (funcList.length > 0) {
+			const code = `window.ewvjs._createApi(${JSON.stringify(funcList)});`;
+			this._pendingApiInjection = code;
+		}
 
-    private async _call(method: string, payload: any = null): Promise<any> {
-        if (this._isClosed) {
-            console.warn(`Cannot call ${method}: Window is closed`);
-            return null;
-        }
-        
-        if (!this.controller || !this.controller[method]) {
-            throw new Error(`Window not running or ${method} not supported`);
-        }
-        
-        try {
-            const result = this.controller[method](payload);
-            
-            // Check if method returns a Promise (node-api-dotnet JSCallback style)
-            if (result && typeof result.then === 'function') {
-                return result;
-            } else {
-                return result;
-            }
-        } catch (err: any) {
-            // If window was closed mid-operation, mark as closed and return null
-            if (err && err.message && err.message.includes('Window not initialized')) {
-                this._isClosed = true;
-                console.warn(`Window was closed during ${method} call`);
-                return null;
-            }
-            throw err;
-        }
-    }
+		return this.controller;
+	}
 
-    // Core methods
-    async evaluate_js(script: string): Promise<any> {
-        return this._call('evaluate', script);
-    }
+	private async _call(method: string, payload: any = null): Promise<any> {
+		if (this._isClosed) {
+			console.warn(`Cannot call ${method}: Window is closed`);
+			return null;
+		}
 
-    async evaluate(script: string): Promise<any> { 
-        return this.evaluate_js(script); 
-    }
+		if (!this.controller || !this.controller[method]) {
+			throw new Error(`Window not running or ${method} not supported`);
+		}
 
-    async close() {
-        if (this._isClosed) return;
-        this._isClosed = true;
-        const result = await this._call('close');
-        this._resolveClosed();
-        return result;
-    }
+		try {
+			const result = this.controller[method](payload);
 
-    async destroy() {
-        return this._call('close');
-    }
+			// Check if method returns a Promise (node-api-dotnet JSCallback style)
+			if (result && typeof result.then === "function") {
+				return result;
+			} else {
+				return result;
+			}
+		} catch (err: any) {
+			// If window was closed mid-operation, mark as closed and return null
+			if (
+				err &&
+				err.message &&
+				err.message.includes("Window not initialized")
+			) {
+				this._isClosed = true;
+				console.warn(`Window was closed during ${method} call`);
+				return null;
+			}
+			throw err;
+		}
+	}
 
-    // Window state methods
-    async maximize() { return this._call('maximize'); }
-    async restore() { return this._call('restore'); }
-    async minimize() { return this._call('minimize'); }
-    async focus() { return this._call('focus'); }
-    async show() { return this._call('show'); }
-    async hide() { return this._call('hide'); }
+	// Core methods
 
-    // Size and position methods
-    async getSize() { return this._call('getSize'); }
-    async setSize(width: number, height: number) { 
-        return this._call('setSize', { width, height }); 
-    }
-    async resize(width: number, height: number) { 
-        return this._call('setSize', { width, height }); 
-    }
+	async evaluate(script: string): Promise<any> {
+		return this._call("evaluate", script);
+	}
 
-    async getMinSize() { return this._call('getMinSize'); }
-    async setMinSize(width: number, height: number) { 
-        return this._call('setMinSize', { width, height }); 
-    }
-    async set_min_size(width: number, height: number) { 
-        return this._call('setMinSize', { width, height }); 
-    }
+	async close() {
+		if (this._isClosed) return;
+		this._isClosed = true;
+		const result = await this._call("close");
+		this._resolveClosed();
+		return result;
+	}
 
-    async getPosition() { return this._call('getPosition'); }
-    async setPosition(x: number, y: number) { 
-        return this._call('setPosition', { x, y }); 
-    }
-    async move(x: number, y: number) { 
-        return this._call('move', { x, y }); 
-    }
+	async destroy() {
+		return this._call("close");
+	}
 
-    async get_position() { return this._call('getPosition'); }
-    async set_position(x: number, y: number) { 
-        return this._call('setPosition', { x, y }); 
-    }
+	// Window state methods
+	async maximize() {
+		return this._call("maximize");
+	}
+	async restore() {
+		return this._call("restore");
+	}
+	async minimize() {
+		return this._call("minimize");
+	}
+	async focus() {
+		return this._call("focus");
+	}
+	async show() {
+		return this._call("show");
+	}
+	async hide() {
+		return this._call("hide");
+	}
 
-    async get_width(): Promise<number> {
-        const size: any = await this._call('getSize');
-        return size.width;
-    }
+	// Size and position methods
+	async getSize() {
+		return this._call("getSize");
+	}
+	async setSize(width: number, height: number) {
+		return this._call("setSize", { width, height });
+	}
+	async resize(width: number, height: number) {
+		return this._call("setSize", { width, height });
+	}
 
-    async get_height(): Promise<number> {
-        const size: any = await this._call('getSize');
-        return size.height;
-    }
+	async getMinSize() {
+		return this._call("getMinSize");
+	}
+	async setMinSize(width: number, height: number) {
+		return this._call("setMinSize", { width, height });
+	}
 
-    // Title methods
-    async setTitle(title: string) { 
-        return this._call('setTitle', title); 
-    }
-    async set_title(title: string) { 
-        return this._call('setTitle', title); 
-    }
+	async getPosition() {
+		return this._call("getPosition");
+	}
+	async setPosition(x: number, y: number) {
+		return this._call("setPosition", { x, y });
+	}
+	async move(x: number, y: number) {
+		return this._call("move", { x, y });
+	}
 
-    // Title bar methods
-    async show_titlebar() { return this._call('setTitleBar', true); }
-    async hide_titlebar() { return this._call('setTitleBar', false); }
+	// Title methods
+	async setTitle(title: string) {
+		return this._call("setTitle", title);
+	}
 
-    // Icon methods
-    async setIcon(iconPath: string) {
-        return this._call('setIcon', iconPath);
-    }
+	// Title bar methods
+	async showTitlebar() {
+		return this._call("setTitleBar", true);
+	}
+	async hideTitlebar() {
+		return this._call("setTitleBar", false);
+	}
 
-    // Cookie methods
-    async get_cookies() { return this._call('getCookies'); }
-    async set_cookie(name: string, value: string, domain: string = '', path: string = '/') {
-        return this._call('setCookie', { name, value, domain, path });
-    }
-    async clear_cookies() { return this._call('clearCookies'); }
+	// Icon methods
+	async setIcon(iconPath: string) {
+		return this._call("setIcon", iconPath);
+	}
 
-    private async _on_message(message: any, exposedFunctions: { [key: string]: Function }) {
-        try {
-            const data = typeof message === 'string' ? JSON.parse(message) : message;
-            if (!Array.isArray(data)) return null;
+	// Cookie methods
+	async getCookies() {
+		return this._call("getCookies");
+	}
+	async setCookie(
+		name: string,
+		value: string,
+		domain: string = "",
+		path: string = "/",
+	) {
+		return this._call("setCookie", { name, value, domain, path });
+	}
+	async clearCookies() {
+		return this._call("clearCookies");
+	}
 
-            const funcName = data[0];
-            const rawParams = data[1];
-            const id = data[2];
-            
-            const params = this._parseParams(rawParams);
+	private async _on_message(
+		message: any,
+		exposedFunctions: { [key: string]: Function },
+	) {
+		try {
+			const data = typeof message === "string" ? JSON.parse(message) : message;
+			if (!Array.isArray(data)) return null;
 
-            // Handle special messages
-            if (funcName === 'closed') {
-                this._isClosed = true;
-                this._resolveClosed();
-                return null;
-            }
+			const funcName = data[0];
+			const rawParams = data[1];
+			const id = data[2];
 
-            if (funcName === 'console') {
-                console.log('WebView Console:', ...params);
-                return null;
-            }
+			const params = this._parseParams(rawParams);
 
-            if (funcName === 'menu_click') {
-                return this._handleMenuClick(params);
-            }
+			// Handle special messages
+			if (funcName === "closed") {
+				this._isClosed = true;
+				this._resolveClosed();
+				return null;
+			}
 
-            if (funcName === 'context_menu_requested') {
-                return this._handleContextMenu(params);
-            }
+			if (funcName === "dom_ready") {
+				// DOM is ready, inject the API now
+				if (this._pendingApiInjection) {
+					await this.evaluate(this._pendingApiInjection).catch((err) => {
+						console.error("Failed to inject exposed functions API:", err);
+					});
+					this._pendingApiInjection = null;
+				}
+				return null;
+			}
 
-            // Handle window state methods
-            if (funcName.startsWith('window_')) {
-                const method = funcName.substring(7); // Remove 'window_' prefix
-                if (typeof (this as any)[method] === 'function') {
-                    await (this as any)[method]();
-                }
-                return null;
-            }
+			if (funcName === "console") {
+				console.log("WebView Console:", ...params);
+				return null;
+			}
 
-            // Handle exposed function calls
-            return this._handleExposedFunction(funcName, params, id, exposedFunctions);
-        } catch (e) { 
-            return null;
-        }
-    }
+			if (funcName === "menu_click") {
+				return this._handleMenuClick(params);
+			}
 
-    private _parseParams(rawParams: any): any[] {
-        let params: any[] = [];
+			if (funcName === "context_menu_requested") {
+				return this._handleContextMenu(params);
+			}
 
-        if (rawParams) {
-            if (typeof rawParams === 'string' && (rawParams.startsWith('[') || rawParams.startsWith('{'))) {
-                try {
-                    const parsed = JSON.parse(rawParams);
-                    params = Array.isArray(parsed) ? parsed : [parsed];
-                } catch (e) {
-                    params = [rawParams];
-                }
-            } else {
-                params = Array.isArray(rawParams) ? rawParams : [rawParams];
-            }
-        }
+			// Handle window state methods
+			if (funcName.startsWith("window_")) {
+				const method = funcName.substring(7); // Remove 'window_' prefix
+				if (typeof (this as any)[method] === "function") {
+					await (this as any)[method]();
+				}
+				return null;
+			}
 
-        return params;
-    }
+			// Handle exposed function calls
+			return this._handleExposedFunction(
+				funcName,
+				params,
+				id,
+				exposedFunctions,
+			);
+		} catch (e) {
+			return null;
+		}
+	}
 
-    private _handleMenuClick(params: any[]): null {
-        const callbackId = params[0];
-        const callback = this._menuCallbacks.get(callbackId);
-        if (callback) callback();
-        return null;
-    }
+	private _parseParams(rawParams: any): any[] {
+		let params: any[] = [];
 
-    private async _handleContextMenu(params: any[]): Promise<ContextMenuItem[] | null> {
-        if (this.on_context_menu) {
-            const customMenu = await this.on_context_menu(params);
-            if (customMenu) {
-                return this._processMenu(customMenu);
-            }
-        }
-        return null;
-    }
+		if (rawParams) {
+			if (
+				typeof rawParams === "string" &&
+				(rawParams.startsWith("[") || rawParams.startsWith("{"))
+			) {
+				try {
+					const parsed = JSON.parse(rawParams);
+					params = Array.isArray(parsed) ? parsed : [parsed];
+				} catch (e) {
+					params = [rawParams];
+				}
+			} else {
+				params = Array.isArray(rawParams) ? rawParams : [rawParams];
+			}
+		}
 
-    private async _handleExposedFunction(
-        funcName: string, 
-        params: any[], 
-        id: string,
-        exposedFunctions: { [key: string]: Function }
-    ): Promise<any> {
-        const func = exposedFunctions[funcName];
-        if (!func) return null;
+		return params;
+	}
 
-        try {
-            const result = await func(...params);
-            await this._sendSuccessResponse(funcName, id, result);
-            return result !== undefined ? result : null;
-        } catch (err: any) {
-            await this._sendErrorResponse(funcName, id, err);
-            return null;
-        }
-    }
+	private _handleMenuClick(params: any[]): null {
+		const callbackId = params[0];
+		const callback = this._menuCallbacks.get(callbackId);
+		if (callback) callback();
+		return null;
+	}
 
-    private async _sendSuccessResponse(funcName: string, id: string, result: any): Promise<void> {
-        const resJson = JSON.stringify(result);
-        const code = `window.ewvjs._returnValuesCallbacks["${funcName}"]["${id}"]({value: ${JSON.stringify(resJson)}, isError: false})`;
-        await this.evaluate_js(code);
-    }
+	private async _handleContextMenu(
+		params: any[],
+	): Promise<ContextMenuItem[] | null> {
+		if (this.on_context_menu) {
+			const customMenu = await this.on_context_menu(params);
+			if (customMenu) {
+				return this._processMenu(customMenu);
+			}
+		}
+		return null;
+	}
 
-    private async _sendErrorResponse(funcName: string, id: string, err: any): Promise<void> {
-        const errObj = { message: err.message, name: err.name, stack: err.stack };
-        const code = `window.ewvjs._returnValuesCallbacks["${funcName}"]["${id}"]({value: ${JSON.stringify(JSON.stringify(errObj))}, isError: true})`;
-        await this.evaluate_js(code);
-    }
+	private async _handleExposedFunction(
+		funcName: string,
+		params: any[],
+		id: string,
+		exposedFunctions: { [key: string]: Function },
+	): Promise<any> {
+		const func = exposedFunctions[funcName];
+		if (!func) return null;
 
-    private _processMenu(menu: ContextMenuItem[]): ContextMenuItem[] {
-        return menu.map((item) => {
-            const newItem = { ...item };
-            
-            if (newItem.click) {
-                const id = newItem.id || generateId();
-                newItem.id = id;
-                this._menuCallbacks.set(id, newItem.click);
-                delete newItem.click;
-            }
-            
-            if (newItem.submenu) {
-                newItem.submenu = this._processMenu(newItem.submenu);
-            }
-            
-            return newItem;
-        });
-    }
+		try {
+			const result = await func(...params);
+			await this._sendSuccessResponse(funcName, id, result);
+			return result !== undefined ? result : null;
+		} catch (err: any) {
+			await this._sendErrorResponse(funcName, id, err);
+			return null;
+		}
+	}
+
+	private async _sendSuccessResponse(
+		funcName: string,
+		id: string,
+		result: any,
+	): Promise<void> {
+		const resJson = JSON.stringify(result);
+		const code = `window.ewvjs._returnValuesCallbacks["${funcName}"]["${id}"]({value: ${JSON.stringify(resJson)}, isError: false})`;
+		await this.evaluate(code);
+	}
+
+	private async _sendErrorResponse(
+		funcName: string,
+		id: string,
+		err: any,
+	): Promise<void> {
+		const errObj = { message: err.message, name: err.name, stack: err.stack };
+		const code = `window.ewvjs._returnValuesCallbacks["${funcName}"]["${id}"]({value: ${JSON.stringify(JSON.stringify(errObj))}, isError: true})`;
+		await this.evaluate(code);
+	}
+
+	private _processMenu(menu: ContextMenuItem[]): ContextMenuItem[] {
+		return menu.map((item) => {
+			const newItem = { ...item };
+
+			if (newItem.click) {
+				const id = newItem.id || generateId();
+				newItem.id = id;
+				this._menuCallbacks.set(id, newItem.click);
+				delete newItem.click;
+			}
+
+			if (newItem.submenu) {
+				newItem.submenu = this._processMenu(newItem.submenu);
+			}
+
+			return newItem;
+		});
+	}
 }

@@ -138,13 +138,14 @@ Once a window is created, you can control it using the returned `Window` instanc
 *   **State**: `maximize()`, `minimize()`, `restore()`, `hide()`, `focus()`, `show()`
 *   **Size & Position**:
     *   `getSize()`, `setSize(w, h)`, `resize(w, h)`
-    *   `getMinSize()`, `setMinSize(w, h)`, `set_min_size(w, h)`
+    *   `getMinSize()`, `setMinSize(w, h)`
     *   `getPosition()`, `setPosition(x, y)`, `move(x, y)`
 *   **Interaction**:
     *   `setTitle(title)`
+    *   `showTitlebar()`, `hideTitlebar()`
     *   `evaluate(script)`: Execute JavaScript in the WebView.
     *   `setIcon(path)`
-*   **Cookies**: `get_cookies()`, `set_cookie(...)`, `clear_cookies()`
+*   **Cookies**: `getCookies()`, `setCookie(name, value, domain, path)`, `clearCookies()`
 
 ### Custom Context Menus
 
@@ -274,7 +275,6 @@ The packaged application will be created in the `dist/` directory with:
 **Notes:**
 *   Icon file must be in `.ico` format
 *   Additional modules should be listed without spaces: `axios,lodash,express`
-*   The `--compress` option requires UPX to be installed and available in PATH
 *   Default target `node18-win-x64` works with Node.js 18+ on 64-bit Windows
 
 ### Getting Help

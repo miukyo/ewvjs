@@ -1,9 +1,15 @@
-const { spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const archiver = require('archiver');
-const { bundleAssets } = require('./assets');
-const { setIcon } = require('./icon');
+import { spawn } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+import archiver from 'archiver';
+import { bundleAssets } from './assets.js';
+import { setIcon } from './icon.js';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
 
 /**
  * Convert console application to GUI application (hide console window)
@@ -398,4 +404,4 @@ function createArchive(sourceDir, outputPath) {
   });
 }
 
-module.exports = packageApp;
+export default packageApp;

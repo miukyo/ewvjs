@@ -1,35 +1,9 @@
-const { settings } = require('node:cluster');
-const ewvjs = require('../dist/index');
+import { settings } from 'node:cluster';
+import ewvjs from '../dist/index.js';
 
 async function test() {
     console.log('Creating window for features test...');
-    const html = `
-        <html>
-        <head>
-            <style>
-                html,body {
-                background-color: transparent;
-                }
-                .ewvjs-drag-region {
-                    width: 100%;
-                    height: 50px;
-                    background: #333;
-                    color: white;
-                    text-align: center;
-                    line-height: 50px;
-                    cursor: move;
-                    user-select: none;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="ewvjs-drag-region">DRAG ME</div>
-            <h1>Features Test</h1>
-            <button onclick="window.ewvjs.api.log('Hello from JS')">Log to Node</button>
-        </body>
-        </html>
-    `;
-    const w = ewvjs.create_window('Features Test', html, { vibrancy: true, title_bar: false });
+    const w = ewvjs.create_window('Features Test', `index.html`, { vibrancy: true, title_bar: false });
 
     ewvjs.expose('log', (msg) => console.log('JS says:', msg));
 
@@ -42,7 +16,7 @@ async function test() {
 
     // 1. Test Title
     console.log('Testing set_title...');
-    await w.set_title('New Title Work');
+    await w.setTitle('New Title Work');
 
     // // 2. Test State
     // console.log('Testing maximize...');
@@ -63,8 +37,8 @@ async function test() {
 
     // 5. Test Cookies
     console.log('Testing cookies...');
-    await w.evaluate_js('document.cookie = "test=123"');
-    const cookies = await w.get_cookies();
+    await w.evaluate('document.cookie = "test=123"');
+    const cookies = await w.getCookies();
     console.log('Cookies:', cookies);
 
     // 6. Test Title Bar

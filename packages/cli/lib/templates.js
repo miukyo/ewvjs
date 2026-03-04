@@ -1,5 +1,9 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Get available templates
@@ -85,7 +89,7 @@ function isValidTemplate(templateName) {
   return templates.some(t => t.name === templateName);
 }
 
-module.exports = {
+export {
   getAvailableTemplates,
   copyTemplate,
   isValidTemplate

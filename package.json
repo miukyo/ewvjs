@@ -5,12 +5,13 @@
   "workspaces": [
     "packages/*"
   ],
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js"
     }
   },
   "files": [
@@ -21,7 +22,7 @@
   ],
   "scripts": {
     "prebuild": "node scripts/copy-native.js",
-    "build": "npm run prebuild && tsc",
+    "build": "tsc",
     "build:webview": "dotnet build src/csharp/WebView.csproj -c Release"
   },
   "keywords": [
@@ -40,15 +41,16 @@
     "type": "git",
     "url": "https://github.com/miukyo/ewvjs"
   },
-  "type": "commonjs",
   "os": [
     "win32"
   ],
   "devDependencies": {
+    "@types/mime-types": "^3.0.1",
     "@types/node": "^25.2.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "mime-types": "^3.0.2",
     "node-api-dotnet": "^0.9.19"
   }
 }

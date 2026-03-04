@@ -1,4 +1,4 @@
-const { create_window } = require('../dist/index.js');
+import { create_window } from '../dist/index.js';
 
 async function testAllAPIs() {
     console.log('=== Testing All Window APIs ===\n');
@@ -123,13 +123,13 @@ async function testAllAPIs() {
     // Test title bar
     console.log('\n--- Testing Title Bar ---');
     await test('hide title bar', async () => {
-        await win.hide_titlebar();
+        await win.hideTitlebar();
         await new Promise(resolve => setTimeout(resolve, 200));
         return 'Title bar hidden';
     });
 
     await test('show title bar', async () => {
-        await win.show_titlebar();
+        await win.showTitlebar();
         await new Promise(resolve => setTimeout(resolve, 200));
         return 'Title bar shown';
     });
@@ -137,25 +137,25 @@ async function testAllAPIs() {
     // Test evaluate (JavaScript execution)
     console.log('\n--- Testing JavaScript Evaluation ---');
     await test('evaluate (simple)', async () => {
-        const result = await win.evaluate_js('2 + 2');
+        const result = await win.evaluate('2 + 2');
         return `Result: ${result}`;
     });
 
     await test('evaluate (document.title)', async () => {
-        const title = await win.evaluate_js('document.title');
+        const title = await win.evaluate('document.title');
         return `Page title: ${title}`;
     });
 
     // Test cookies
     console.log('\n--- Testing Cookie Methods ---');
     await test('setCookie', async () => {
-        await win.set_cookie('test_cookie', 'test_value', '.google.com', '/');
+        await win.setCookie('test_cookie', 'test_value', '.google.com', '/');
         await new Promise(resolve => setTimeout(resolve, 100));
         return 'Cookie set';
     });
 
     await test('getCookies', async () => {
-        const cookies = await win.get_cookies();
+        const cookies = await win.getCookies();
         return `Found ${cookies ? cookies.length : 0} cookies`;
     });
 
@@ -183,14 +183,9 @@ async function testAllAPIs() {
 
     // Test getting window dimensions
     console.log('\n--- Testing Dimension Getters ---');
-    await test('get_width', async () => {
-        const width = await win.get_width();
-        return `Width: ${width}px`;
-    });
-
-    await test('get_height', async () => {
-        const height = await win.get_height();
-        return `Height: ${height}px`;
+    await test('get_size', async () => {
+        const size = await win.getSize();
+        return `Width: ${size.width}px, Height: ${size.height}px`;
     });
 
     // Print summary

@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const archiver = require('archiver');
+import fs from 'fs';
+import path from 'path';
+import archiver from 'archiver';
 
 /**
  * Bundle assets directory
@@ -121,7 +121,7 @@ function formatBytes(bytes) {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
-module.exports = {
+export {
   bundleAssets,
   createAssetsArchive,
   copyDirectory,
