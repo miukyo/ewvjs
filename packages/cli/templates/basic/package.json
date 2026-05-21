@@ -10,6 +10,6 @@
   },
   "dependencies": {
     "ewvjs": "^1.0.12",
-    "ewvjs-cli": "^1.0.12"
+    "ewvjs-cli": "^1.0.14"
   }
 }
