@@ -31,8 +31,11 @@ ewvjs-cli init my-app
 With a specific template:
 
 ```bash
-# Basic template (default - interactive with APIs)
+# Basic template (default - plain HTML/JS frontend)
 ewvjs-cli init my-app --template basic
+
+# React template (premium React 19 + Vite 8 + TypeScript dashboard)
+ewvjs-cli init my-app --template react
 ```
 
 ### Package your application
@@ -49,8 +52,6 @@ ewvjs-cli package app.js -o myapp -n "My Application"
 - `-n, --name <name>` - Application name (default: "My App")
 - `-t, --target <target>` - Target platform (default: "node18-win-x64")
 - `-m, --modules <modules>` - Additional node modules to bundle (comma-separated)
-- `--compress` - Compress the executable with UPX
-- `--no-native` - Skip bundling native DLLs
 
 ### Example
 
@@ -65,11 +66,11 @@ npm install
 # Run in development
 npm start
 
-# Create with a specific template
-ewvjs-cli init simple-app --template basic
+# Create a React project
+ewvjs-cli init simple-app --template react
 
 # Package for distribution
-ewvjs-cli package app.js -o MyAwesomeApp -n "My Awesome App" -i icon.ico --compress
+ewvjs-cli package app.js -o MyAwesomeApp -n "My Awesome App" -i icon.ico
 ```
 
 ## License

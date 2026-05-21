@@ -143,9 +143,41 @@ Once a window is created, you can control it using the returned `Window` instanc
 *   **Interaction**:
     *   `setTitle(title)`
     *   `showTitlebar()`, `hideTitlebar()`
-    *   `evaluate(script)`: Execute JavaScript in the WebView.
+    *   `evaluate(script, [frame])`: Execute JavaScript in the WebView or target a specific subframe/iframe context.
     *   `setIcon(path)`
 *   **Cookies**: `getCookies()`, `setCookie(name, value, domain, path)`, `clearCookies()`
+
+### Executing JavaScript inside IFrames (Cross-Origin Bypass)
+
+The `evaluate` method supports executing and injecting JavaScript directly inside any subframe/iframe context, completely bypassing standard browser Same-Origin Policy (SOP) limitations. This enables the native Node.js layer to inspect and mutate the DOM of cross-origin or same-origin subframes natively.
+
+```typescript
+async evaluate(script: string, frame?: string | number): Promise<any>
+```
+
+#### Parameters:
+*   `script`: The JavaScript code string to execute.
+*   `frame` *(optional)*: The target subframe selector. This can be:
+    *   **String**: The iframe's `name` attribute value (case-insensitive) or a substring of the iframe's loaded `src` URL.
+    *   **Number**: The internal unique frame registry identifier.
+
+#### Example:
+```javascript
+// Execute on top-level main document
+const title = await win.evaluate("document.title");
+
+// Execute inside a cross-origin iframe using its frame name
+const iframeText = await win.evaluate(
+    "document.querySelector('h1').innerText", 
+    "my-frame-name"
+);
+
+// Execute inside an iframe targeted by its loaded URL substring
+await win.evaluate(
+    "document.body.style.background = '#8b5cf6'", 
+    "example.com/payment"
+);
+```
 
 ### Custom Context Menus
 
@@ -196,25 +228,53 @@ Create a new ewvjs project with a sample application structure.
 
 **Usage:**
 ```bash
-npx ewvjs-cli init [name]
+npx ewvjs-cli init [name] [options]
 ```
 
 **Arguments:**
 *   `name` - Project name (default: `my-ewvjs-app`)
 
+**Options:**
+*   `-t, --template <template>` - Template to initialize (`basic` | `react`) (default: `basic`)
+*   `-l, --list-templates` - List all available templates
+
 **Example:**
 ```bash
-npx ewvjs-cli init my-awesome-app
+npx ewvjs-cli init my-awesome-app --template react
 cd my-awesome-app
 npm install
-npm start
+npm run dev
 ```
 
-This creates:
-*   `package.json` - Project configuration with scripts
-*   `app.js` - Sample application with Node.js integration
-*   `assets/` - Directory for static assets
-*   `README.md` - Project documentation
+### Project Templates
+
+`ewvjs-cli` supports two official templates out of the box:
+
+#### 1. Basic Template (`basic` - default)
+A simple, lightweight setup using plain static assets:
+- **`app.js`**: Main host controller containing standard Node.js exposure hooks.
+- **`assets/`**: Pure HTML/CSS/JS frontend files loaded natively via `file://` resolution.
+
+#### 2. React Template (`react`)
+A premium, feature-rich React 19 + Vite 8 + TypeScript development environment:
+- **Vite Bundler**: Ultra-fast build times and hot-reload configs.
+- **Premium Styling**: Pre-configured global CSS resets, sleek glassmorphic themes, and linear gradients styled around the **Outfit** Google Font.
+- **HMR Developer Runner**: Spawns a parallel Vite developer server and embeds it directly into the native ewvjs window, rendering real-time UI changes dynamically as you edit.
+- **Type-Safe Host API**: Employs global typed window definitions for fully intelligent, warning-free React-to-Node API communications.
+
+**React Workflow Commands:**
+```bash
+# Initialize a new React project
+npx ewvjs-cli init my-react-app --template react
+cd my-react-app
+npm install
+
+# Run the HMR interactive developer window
+npm run dev
+
+# Compile React static outputs and build a standalone packaged exe
+npm run package
+```
 
 ---
 
@@ -240,7 +300,6 @@ npx ewvjs-cli package <entry> [options]
 | `--assets <dir>` | `-a` | Assets directory to include in package | `./assets` |
 | `--target <target>` | `-t` | Target platform | `node18-win-x64` |
 | `--modules <modules>` | `-m` | Additional node modules to bundle (comma-separated) | None |
-| `--no-native` | | Skip bundling native DLLs (if already included) | Includes by default |
 
 **Examples:**
 
@@ -257,7 +316,6 @@ npx ewvjs-cli package app.js \
   --icon icon.ico \
   --assets ./public \
   --modules axios,lodash \
-  --compress
 ```
 
 Package with custom target:

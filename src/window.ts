@@ -102,9 +102,14 @@ export class Window {
 
 	// Core methods
 
-	async evaluate(script: string): Promise<any> {
+	async evaluate(script: string, frame?: string | number): Promise<any> {
+		if (frame !== undefined) {
+			return this._call("evaluate", { script, frame });
+		}
 		return this._call("evaluate", script);
 	}
+
+
 
 	async close() {
 		if (this._isClosed) return;

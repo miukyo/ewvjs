@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.IO;
 using System.Threading;
@@ -28,7 +28,6 @@ public static class EwvjsInterop
              // Preload all WebView2 and dependent assemblies on the JS thread
              Assembly.Load("Microsoft.Web.WebView2.Core");
              Assembly.Load("Microsoft.Web.WebView2.WinForms");
-             Assembly.Load("Microsoft.Web.WebView2.Wpf");
              Assembly.Load("System.Text.Json");
              Assembly.Load("System.Text.Encodings.Web");
              Assembly.Load("System.Buffers");
@@ -141,6 +140,22 @@ public class WebViewWindow : Form
     private JSPromise.Deferred onReadyDeferred;
     private string? userDataPath;
     private bool isAnonymous;
+
+    private class FrameInfo
+    {
+        public CoreWebView2Frame Frame { get; }
+        public string Name { get; set; }
+        public string Uri { get; set; }
+
+        public FrameInfo(CoreWebView2Frame frame)
+        {
+            Frame = frame;
+            Name = frame.Name ?? "";
+            Uri = "";
+        }
+    }
+
+    private readonly Dictionary<uint, FrameInfo> _frames = new Dictionary<uint, FrameInfo>();
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
@@ -329,31 +344,109 @@ public class WebViewWindow : Form
                         var c = JSValue.CreateObject();
 
                         c["evaluate"] = JSValue.CreateFunction("evaluate", new JSCallback((args) => {
-                var input = args.Length > 0 ? args[0] : JSValue.Undefined;
-                var script = input.IsString() ? (string)input : input.ToString();
-                var promise = JSValue.CreatePromise(out var deferred);
-                if (onMessageTsfn != null && tsfnValid) {
-                    Task.Run(async () => {
-                        try {
-                            string? result = null;
-                            await RunOnUI(async () => {
-                                result = this.webView != null ? await this.webView.ExecuteScriptAsync(script) : null;
-                            });
-                            onMessageTsfn.NonBlockingCall(() => {
-                                JSValue jsResult = result != null ? (JSValue)result : JSValue.Null;
-                                deferred.Resolve(jsResult);
-                            });
-                        } catch (Exception ex) {
-                            onMessageTsfn.NonBlockingCall(() => {
-                                deferred.Reject(new JSError(ex.Message));
-                            });
-                        }
-                    });
-                } else {
-                    deferred.Reject(new JSError("Window not initialized"));
-                }
-                return promise;
-            }));
+                            string script = "";
+                            object? frameSelector = null;
+                            if (args.Length > 0) {
+                                var arg0 = args[0];
+                                if (arg0.IsObject() && !arg0.IsFunction()) {
+                                    try {
+                                        var obj = (JSObject)arg0;
+                                        var sVal = obj["script"];
+                                        if (!sVal.IsUndefined()) {
+                                            script = sVal.IsString() ? (string)sVal : sVal.ToString() ?? "";
+                                        }
+                                        var fVal = obj["frame"];
+                                        if (!fVal.IsUndefined()) {
+                                            if (fVal.IsNumber()) frameSelector = (double)fVal;
+                                            else if (fVal.IsString()) frameSelector = (string)fVal;
+                                        }
+                                    } catch {
+                                        script = arg0.ToString() ?? "";
+                                    }
+                                } else {
+                                    script = arg0.IsString() ? (string)arg0 : arg0.ToString() ?? "";
+                                    if (args.Length > 1) {
+                                        var arg1 = args[1];
+                                        if (arg1.IsNumber()) frameSelector = (double)arg1;
+                                        else if (arg1.IsString()) frameSelector = (string)arg1;
+                                    }
+                                }
+                            }
+
+                            var promise = JSValue.CreatePromise(out var deferred);
+                            if (onMessageTsfn != null && tsfnValid) {
+                                Task.Run(async () => {
+                                    try {
+                                        string? result = null;
+                                        bool frameFoundOrNotTargeted = true;
+                                        string errorMsg = "";
+
+                                        await RunOnUI(async () => {
+                                            if (this.webView == null) {
+                                                errorMsg = "WebView is not initialized.";
+                                                frameFoundOrNotTargeted = false;
+                                                return;
+                                            }
+
+                                            if (frameSelector != null) {
+                                                CoreWebView2Frame? targetFrame = null;
+                                                lock (_frames) {
+                                                    if (frameSelector is double dId) {
+                                                        uint id = (uint)dId;
+                                                        if (_frames.ContainsKey(id)) {
+                                                            targetFrame = _frames[id].Frame;
+                                                        }
+                                                    } else if (frameSelector is string selectorStr) {
+                                                        if (uint.TryParse(selectorStr, out uint id) && _frames.ContainsKey(id)) {
+                                                            targetFrame = _frames[id].Frame;
+                                                        } else {
+                                                            var match = _frames.Values.FirstOrDefault(f => 
+                                                                string.Equals(f.Name, selectorStr, StringComparison.OrdinalIgnoreCase));
+                                                            if (match != null) {
+                                                                targetFrame = match.Frame;
+                                                            } else {
+                                                                var matchUri = _frames.Values.FirstOrDefault(f => 
+                                                                    f.Uri != null && f.Uri.IndexOf(selectorStr, StringComparison.OrdinalIgnoreCase) >= 0);
+                                                                if (matchUri != null) {
+                                                                    targetFrame = matchUri.Frame;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                                if (targetFrame != null) {
+                                                    result = await targetFrame.ExecuteScriptAsync(script);
+                                                } else {
+                                                    errorMsg = $"Frame not found for selector: {frameSelector}";
+                                                    frameFoundOrNotTargeted = false;
+                                                }
+                                            } else {
+                                                result = await this.webView.ExecuteScriptAsync(script);
+                                            }
+                                        });
+
+                                        onMessageTsfn.NonBlockingCall(() => {
+                                            if (frameFoundOrNotTargeted) {
+                                                JSValue jsResult = result != null ? (JSValue)result : JSValue.Null;
+                                                deferred.Resolve(jsResult);
+                                            } else {
+                                                deferred.Reject(new JSError(errorMsg));
+                                            }
+                                        });
+                                    } catch (Exception ex) {
+                                        onMessageTsfn.NonBlockingCall(() => {
+                                            deferred.Reject(new JSError(ex.Message));
+                                        });
+                                    }
+                                });
+                            } else {
+                                deferred.Reject(new JSError("Window not initialized"));
+                            }
+                            return promise;
+                        }));
+
+
 
             c["close"] = JSValue.CreateFunction("close", new JSCallback((args) => {
                 this.Invoke(new Action(() => this.Close()));
@@ -646,6 +739,48 @@ public class WebViewWindow : Form
 
             var environment = await CoreWebView2Environment.CreateAsync(null, userDataPath, envOptions);
             await webView.EnsureCoreWebView2Async(environment);
+
+            webView.CoreWebView2.FrameCreated += (sender, args) =>
+            {
+                var frame = args.Frame;
+                uint frameId = frame.FrameId;
+                var info = new FrameInfo(frame);
+                
+                lock (_frames)
+                {
+                    _frames[frameId] = info;
+                }
+
+                frame.NameChanged += (s, ev) =>
+                {
+                    lock (_frames)
+                    {
+                        if (_frames.ContainsKey(frameId))
+                        {
+                            _frames[frameId].Name = frame.Name ?? "";
+                        }
+                    }
+                };
+
+                frame.NavigationStarting += (s, ev) =>
+                {
+                    lock (_frames)
+                    {
+                        if (_frames.ContainsKey(frameId))
+                        {
+                            _frames[frameId].Uri = ev.Uri ?? "";
+                        }
+                    }
+                };
+
+                frame.Destroyed += (s, ev) =>
+                {
+                    lock (_frames)
+                    {
+                        _frames.Remove(frameId);
+                    }
+                };
+            };
 
             if ((options.ContainsKey("transparent") && (bool)options["transparent"]) || 
                 (!options.ContainsKey("vibrancy") || (bool)options["vibrancy"]))

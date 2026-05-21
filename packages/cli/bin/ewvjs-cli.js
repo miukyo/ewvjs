@@ -31,8 +31,6 @@ program
   .option('-n, --name <name>', 'Application name', 'My App')
   .option('-t, --target <target>', 'Target platform', 'node18-win-x64')
   .option('-m, --modules <modules>', 'Additional node modules to bundle (comma-separated, e.g., "axios,lodash")')
-  .option('--compress', 'Compress the executable with UPX', false)
-  .option('--no-native', 'Skip bundling native DLLs (use if already included)')
   .action(async (entry, options) => {
     try {
       console.log('📦 Packaging ewvjs application...\n');
@@ -69,8 +67,6 @@ program
         icon: options.icon ? path.resolve(process.cwd(), options.icon) : null,
         name: options.name,
         target: options.target,
-        compress: options.compress,
-        includeNative: options.native,
         additionalModules: additionalModules
       };
 
@@ -90,7 +86,7 @@ program
   .command('init')
   .description('Initialize a new ewvjs project')
   .argument('[name]', 'Project name')
-  .option('-t, --template <template>', 'Template to use (minimal, basic, advanced)')
+  .option('-t, --template <template>', 'Template to use (basic, react)')
   .option('-l, --list-templates', 'List available templates')
   .action(async (name, options) => {
     // Handle list templates option

@@ -19,25 +19,25 @@ function convertToGuiApp(exePath) {
   try {
     // Read the executable as a buffer
     const exeBuffer = fs.readFileSync(exePath);
-    
+
     // Get PE signature offset (at 0x3C in DOS header)
     const peOffset = exeBuffer.readUInt32LE(0x3C);
-    
+
     // PE signature is 4 bytes ("PE\0\0")
     // COFF header is 20 bytes
     // Optional header starts at peOffset + 24
     // Subsystem is at offset 68 (0x44) in optional header
     const subsystemOffset = peOffset + 24 + 68;
-    
+
     // Read current subsystem value
     const currentSubsystem = exeBuffer.readUInt16LE(subsystemOffset);
     console.log(`   Current subsystem: ${currentSubsystem} (3=CONSOLE, 2=GUI)`);
-    
+
     // Set to IMAGE_SUBSYSTEM_WINDOWS_GUI (2) instead of CONSOLE (3)
     if (currentSubsystem === 3) {
-      exeBuffer.writeUInt16LE(2, subsystemOffset);
+      // exeBuffer.writeUInt16LE(2, subsystemOffset);
       console.log(`   Changed subsystem to GUI (2)`);
-      
+
       // Write the modified executable
       fs.writeFileSync(exePath, exeBuffer);
     }
@@ -59,21 +59,21 @@ function runPkg(args) {
     try {
       const pkgPackageJson = require.resolve('@yao-pkg/pkg/package.json');
       const pkgDir = path.dirname(pkgPackageJson);
-      
+
       // Check for different possible bin locations
       const possibleBins = [
         path.join(pkgDir, 'lib-es5', 'bin.js'),
         path.join(pkgDir, 'lib', 'bin.js'),
         path.join(pkgDir, 'bin', 'pkg.js')
       ];
-      
+
       for (const bin of possibleBins) {
         if (fs.existsSync(bin)) {
           pkgBin = bin;
           break;
         }
       }
-      
+
       if (!pkgBin) {
         throw new Error('pkg binary not found');
       }
@@ -81,24 +81,24 @@ function runPkg(args) {
       reject(new Error(`Cannot find @yao-pkg/pkg installation: ${error.message}`));
       return;
     }
-    
+
     console.log(`   Running: node ${pkgBin} ${args.join(' ')}`);
-    
+
     // Spawn pkg process
     let stdout = '';
     let stderr = '';
-    
+
     const pkgProcess = spawn(process.execPath, [pkgBin, ...args], {
       stdio: ['inherit', 'pipe', 'pipe'],
       shell: false
     });
-    
+
     pkgProcess.stdout.on('data', (data) => {
       const output = data.toString();
       stdout += output;
       process.stdout.write(output);
     });
-    
+
     pkgProcess.stderr.on('data', (data) => {
       const output = data.toString();
       stderr += output;
@@ -129,8 +129,6 @@ function runPkg(args) {
  * @param {string} config.icon - Icon file path (.ico)
  * @param {string} config.name - Application name
  * @param {string} config.target - Target platform (e.g., node18-win-x64)
- * @param {boolean} config.compress - Whether to compress the executable
- * @param {boolean} config.includeNative - Whether to include native DLLs
  * @param {string[]} config.additionalModules - Additional node modules to bundle
  */
 async function packageApp(config) {
@@ -141,8 +139,6 @@ async function packageApp(config) {
     icon,
     name,
     target,
-    compress,
-    includeNative = true,
     additionalModules = []
   } = config;
 
@@ -158,7 +154,6 @@ async function packageApp(config) {
   console.log(`   Entry: ${entry}`);
   console.log(`   Output: ${outputPath}`);
   console.log(`   Target: ${target}`);
-  console.log(`   Compress: ${compress ? 'Yes' : 'No'}`);
   if (assets && fs.existsSync(assets)) {
     console.log(`   Assets: ${assets}`);
   }
@@ -172,93 +167,130 @@ async function packageApp(config) {
 
   // Step 1: Package with @yao-pkg/pkg
   console.log('🔨 Step 1: Creating executable with pkg...');
-  
+
+  let actualEntry = entry;
+  let tempBootstrapPath = null;
+
+  // Add pkg configuration for native modules
+  const pkgConfig = {
+    assets: [],
+    scripts: []
+  };
+
+  // Include package.json in assets so Node knows the package type (e.g. type: module) inside the snapshot
+  const projectPackageJson = path.join(process.cwd(), 'package.json');
+  let isEsm = false;
+  if (fs.existsSync(projectPackageJson)) {
+    pkgConfig.assets.push('package.json');
+    try {
+      const pkgJson = JSON.parse(fs.readFileSync(projectPackageJson, 'utf8'));
+      if (pkgJson.type === 'module') {
+        isEsm = true;
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  if (isEsm) {
+    console.log('   ESM project detected. Generating CommonJS bootstrap wrapper...');
+    tempBootstrapPath = path.join(process.cwd(), '.pkg-bootstrap.cjs');
+    let absoluteEntryPath = path.resolve(entry).replace(/\\/g, '/');
+    fs.writeFileSync(
+      tempBootstrapPath,
+      `const { pathToFileURL } = require('url');\n` +
+      `import(pathToFileURL('${absoluteEntryPath}').href);\n`
+    );
+    actualEntry = tempBootstrapPath;
+
+    // Add original entry to scripts so pkg compiles and traces it and all its dependencies
+    let relativeEntryPath = path.relative(process.cwd(), entry).replace(/\\/g, '/');
+    if (!relativeEntryPath.startsWith('.')) {
+      relativeEntryPath = './' + relativeEntryPath;
+    }
+    pkgConfig.scripts.push(relativeEntryPath);
+  }
+
   const pkgArgs = [
-    entry,
+    actualEntry,
     '--target', target,
     '--output', outputPath,
     '--public',  // Faster, includes sources
     '--no-bytecode',  // Skip bytecode generation for faster packaging
   ];
 
-  if (compress) {
-    pkgArgs.push('--compress', 'GZip');
-  }
+  // Include native DLLs (mandatory)
+  const ewvjsPath = require.resolve('ewvjs');
+  const ewvjsRoot = path.dirname(path.dirname(ewvjsPath));
+  const nativePath = path.join(ewvjsRoot, 'native');
 
-  // Add pkg configuration for native modules
-  const pkgConfig = {
-    assets: []
-  };
-
-  // Include native DLLs if requested
-  if (includeNative) {
-    const ewvjsPath = require.resolve('ewvjs');
-    const ewvjsRoot = path.dirname(path.dirname(ewvjsPath));
-    const nativePath = path.join(ewvjsRoot, 'native');
-    
-    if (fs.existsSync(nativePath)) {
-      console.log('   Including native DLLs from ewvjs...');
-      pkgConfig.assets.push(`${nativePath}/**/*`);
-    }
+  if (fs.existsSync(nativePath)) {
+    console.log('   Including native DLLs from ewvjs...');
+    pkgConfig.assets.push(`${nativePath}/**/*`);
   }
 
   // Write temporary pkg config
   const pkgConfigPath = path.join(process.cwd(), '.pkg-config.json');
   fs.writeFileSync(pkgConfigPath, JSON.stringify(pkgConfig, null, 2));
 
+  // Add configuration to pkg arguments
+  pkgArgs.push('--config', pkgConfigPath);
+
   try {
     // Execute pkg using spawn
     await runPkg(pkgArgs);
     console.log('   ✓ Executable created');
-    
+
     // Convert to GUI application (hide console window)
     console.log('   Converting to GUI application...');
     convertToGuiApp(outputPath);
     console.log('   ✓ Converted to GUI app (no console window)');
-    
-    // Clean up temp config
+
+    // Clean up temp config and bootstrap
     if (fs.existsSync(pkgConfigPath)) {
       fs.unlinkSync(pkgConfigPath);
     }
+    if (tempBootstrapPath && fs.existsSync(tempBootstrapPath)) {
+      fs.unlinkSync(tempBootstrapPath);
+    }
   } catch (error) {
-    // Clean up temp config on error
+    // Clean up temp config and bootstrap on error
     if (fs.existsSync(pkgConfigPath)) {
       fs.unlinkSync(pkgConfigPath);
+    }
+    if (tempBootstrapPath && fs.existsSync(tempBootstrapPath)) {
+      fs.unlinkSync(tempBootstrapPath);
     }
     throw new Error(`pkg failed: ${error.message}`);
   }
 
   // Step 2: Copy native DLLs next to executable
-  if (includeNative) {
-    console.log('\n🔧 Step 2: Copying native dependencies...');
-    const ewvjsPath = require.resolve('ewvjs');
-    const ewvjsRoot = path.dirname(path.dirname(ewvjsPath));
-    const nativePath = path.join(ewvjsRoot, 'native');
-    
+  console.log('\n🔧 Step 2: Copying native dependencies...');
+
     if (fs.existsSync(nativePath)) {
       const targetNativePath = path.join(outputDir, 'native');
-      
+
       // Copy directory recursively
       copyRecursive(nativePath, targetNativePath);
       console.log(`   ✓ Native DLLs copied to ${targetNativePath}`);
-      
+
       // Copy additional node modules if specified
       if (additionalModules.length > 0) {
         console.log('\n   📦 Copying additional node modules...');
         const targetNodeModulesPath = path.join(targetNativePath, 'node_modules');
         const copiedModules = new Set();
-        
+
         /**
          * Recursively copy module and its dependencies
          */
         function copyModuleWithDependencies(moduleName, depth = 0) {
           const indent = '      ' + '  '.repeat(depth);
-          
+
           // Avoid copying the same module twice
           if (copiedModules.has(moduleName)) {
             return;
           }
-          
+
           try {
             // Try to resolve the module from the current project
             const modulePath = require.resolve(moduleName + '/package.json', {
@@ -266,14 +298,14 @@ async function packageApp(config) {
             });
             const moduleRoot = path.dirname(modulePath);
             const moduleDestPath = path.join(targetNodeModulesPath, moduleName);
-            
+
             // Mark as copied before processing to avoid circular dependencies
             copiedModules.add(moduleName);
-            
+
             // Copy the module
             copyRecursive(moduleRoot, moduleDestPath);
             console.log(`${indent}✓ Copied ${moduleName}`);
-            
+
             // Read package.json to get dependencies
             const packageJsonPath = path.join(moduleRoot, 'package.json');
             if (fs.existsSync(packageJsonPath)) {
@@ -282,7 +314,7 @@ async function packageApp(config) {
                 ...packageJson.dependencies,
                 ...packageJson.optionalDependencies
               };
-              
+
               // Recursively copy dependencies
               if (dependencies && Object.keys(dependencies).length > 0) {
                 for (const depName of Object.keys(dependencies)) {
@@ -298,19 +330,17 @@ async function packageApp(config) {
             // Skip missing optional dependencies silently
           }
         }
-        
+
         // Copy each requested module with its dependencies
         for (const moduleName of additionalModules) {
           copyModuleWithDependencies(moduleName, 0);
         }
-        
+
         console.log(`      Total modules copied: ${copiedModules.size}`);
       }
     } else {
       console.warn('   ⚠ Warning: Native DLLs not found in ewvjs installation');
     }
-  }
-
   // Step 3: Bundle assets if provided
   if (assets && fs.existsSync(assets)) {
     console.log('\n📦 Step 3: Bundling assets...');

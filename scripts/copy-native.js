@@ -98,7 +98,6 @@ const itemsToCopy = [
 	"import.cjs",
 	"Microsoft.Web.WebView2.Core.dll",
 	"Microsoft.Web.WebView2.WinForms.dll",
-	"Microsoft.Web.WebView2.Wpf.dll",
     "System.*.dll",
     "Microsoft.Bcl.AsyncInterfaces.dll",
 	"runtimes",

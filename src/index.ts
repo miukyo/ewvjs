@@ -18,8 +18,12 @@ if (isPkg) {
         // Since pkg locks Module properties, we need to intercept requires at a higher level
         // Add the node_modules path to require.resolve paths by modifying module.paths
         // This needs to be done for every module, so we'll hook into the module creation
-        if (typeof (require as any).main !== 'undefined' && (require as any).main.paths) {
-            (require as any).main.paths.unshift(nodeModulesPath);
+        try {
+            if (typeof require !== 'undefined' && (require as any).main !== 'undefined' && (require as any).main.paths) {
+                (require as any).main.paths.unshift(nodeModulesPath);
+            }
+        } catch (e) {
+            // Ignore ReferenceError in pure ES module environments
         }
     }
 }
