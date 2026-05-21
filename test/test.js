@@ -1,9 +1,8 @@
-import { settings } from 'node:cluster';
 import ewvjs from '../dist/index.js';
 
 async function test() {
     console.log('Creating window for features test...');
-    const w = ewvjs.create_window('Features Test', `index.html`, { vibrancy: true, title_bar: false });
+    const w = await ewvjs.create_window('Features Test', `index.html`, { vibrancy: true, title_bar: false });
 
     ewvjs.expose('log', (msg) => console.log('JS says:', msg));
 

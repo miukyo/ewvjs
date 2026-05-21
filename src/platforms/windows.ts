@@ -8,6 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const require = createRequire(import.meta.url);
 
+// Cache the injected API script so it's only read from disk once
+let _cachedApiScript: string | null = null;
+
 export class WindowsPlatform {
 
     constructor() {
@@ -67,22 +70,19 @@ export class WindowsPlatform {
             throw e;
         }
 
-        // Prepare initScript
+        // Prepare initScript — read & cache once, then reuse
         const token = Math.random().toString(36).substring(2, 15);
-        let apiScript = fs.readFileSync(apiPath, 'utf8');
-        apiScript = apiScript.replace('%(token)s', token);
+        if (_cachedApiScript === null) {
+            _cachedApiScript = fs.readFileSync(apiPath, 'utf8');
+        }
+        const apiScript = _cachedApiScript.replace('%(token)s', token);
         options.initScript = apiScript;
 
         // Handle messages from WebView
-        // options.onMessage will be called by C#
-        // We must keep the Node process alive while the window is open, similar to how edge-js performed.
-        const keepAlive = setInterval(() => {}, 5000);
 
         options.onMessage = (message: any, callback?: (err: any, result: any) => void) => {
-            // Check for close message to clear keepAlive
-            // Message from C# on close is explicit string: "[\"closed\", \"\"]"
+            // Check for close message
             if (message === '["closed", ""]' || (Array.isArray(message) && message[0] === 'closed')) {
-                clearInterval(keepAlive);
             }
 
             if (typeof message === 'string') {

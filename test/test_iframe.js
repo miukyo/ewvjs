@@ -14,7 +14,7 @@ async function testRealWorldIframeBypass() {
 
     // Create the window using the parent HTML path
     // ewvjs serves this file on a local HTTP server at http://localhost:<port>
-    const win = create_window('Cross-Origin Bypass Test', parentHtmlPath, {
+    const win = await create_window('Cross-Origin Bypass Test', parentHtmlPath, {
         width: 1024,
         height: 768,
         debug: true

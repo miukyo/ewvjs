@@ -19,7 +19,7 @@ expose('getSystemInfo', () => {
 });
 
 // Create main window
-const window = create_window('Hello ewvjs', `file://${path.resolve('assets/index.html')}`, {
+const window = await create_window('Hello ewvjs', `file://${path.resolve('assets/index.html')}`, {
   width: 800,
   height: 600,
   debug: true

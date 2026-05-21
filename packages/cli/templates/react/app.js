@@ -30,7 +30,7 @@ const startUrl = isDev
 
 console.log(`Launching application (isDev: ${isDev}). Loading: ${startUrl}`);
 
-const window = create_window('ewvjs React Desktop App', startUrl, {
+const window = await create_window('ewvjs React Desktop App', startUrl, {
   width: 1000,
   height: 750,
   debug: true

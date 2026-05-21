@@ -3,7 +3,7 @@ import { create_window } from '../dist/index.js';
 async function testAllAPIs() {
     console.log('=== Testing All Window APIs ===\n');
     
-    const win = create_window('API Test Window', 'https://www.google.com', {
+    const win = await create_window('API Test Window', 'https://www.google.com', {
         width: 800,
         height: 600,
         session: { persist: true }

@@ -5,7 +5,6 @@ import * as http from "http";
 import * as fs from "fs";
 import * as path from "path";
 import mime from "mime-types";
-import { execSync } from "child_process";
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,12 +28,12 @@ export class WebView {
 		}
 	}
 
-	create_window(
+	async create_window(
 		title: string,
 		url_or_html: string = "",
 		options: Partial<WindowOptions> = {},
-	): Window {
-		const opts = this._buildWindowOptions(title, url_or_html, options);
+	): Promise<Window> {
+		const opts = await this._buildWindowOptions(title, url_or_html, options);
 		const window = new Window(this.platform, opts, this.exposed_functions);
 
 		this._windows.add(window);
@@ -100,69 +99,24 @@ export class WebView {
 		return mime.lookup(ext) || "application/octet-stream";
 	}
 
-	private _findFreePort(): number {
-		// Use execSync to find a free port synchronously
-		const script = `
-            import net from 'net';
-            const server = net.createServer();
-            server.listen(0, 'localhost', () => {
-                console.log(server.address().port);
-                server.close();
-            });
-        `;
-
-		try {
-			const output = execSync(
-				`node --input-type=module -e "${script.replace(/"/g, '\\"').replace(/\n/g, " ")}"`,
-				{
-					encoding: "utf-8",
-					timeout: 5000,
-				},
-			);
-			const port = parseInt(output.trim(), 10);
-			if (isNaN(port)) {
-				throw new Error("Failed to parse port");
-			}
-			return port;
-		} catch (err) {
-			// Fallback to port range
-			return 3000 + Math.floor(Math.random() * 1000);
-		}
-	}
-
-	private _createHttpServer(filePath: string): string {
-		// Check if server already exists for this file
+	private _createHttpServer(filePath: string): Promise<string> {
+		// Return cached server URL if already serving this file
 		if (this._httpServers.has(filePath)) {
-			const existingPort = Array.from(this._httpServers.entries()).find(
-				([path, _]) => path === filePath,
-			);
-			if (existingPort) {
-				const addr = existingPort[1].address();
-				if (addr && typeof addr === "object") {
-					return `http://localhost:${addr.port}`;
-				}
+			const existing = this._httpServers.get(filePath)!;
+			const addr = existing.address();
+			if (addr && typeof addr === "object") {
+				return Promise.resolve(`http://localhost:${addr.port}`);
 			}
 		}
 
-		// Resolve relative paths from the main script's directory, not CWD
-		let absolutePath: string;
-
-        // In ESM, use process.argv[1] to get the main script path
-        let mainDir: string;
-        if (process.argv[1]) {
-            mainDir = path.dirname(process.argv[1]);
-        } else {
-            mainDir = process.cwd();
-        }
-        absolutePath = path.resolve(mainDir, filePath);
-
-        console.log(`Serving ${absolutePath} at ${filePath}`);
+		// Resolve the file path relative to the main script directory
+		const mainDir = process.argv[1]
+			? path.dirname(process.argv[1])
+			: process.cwd();
+		const absolutePath = path.resolve(mainDir, filePath);
 
 		const dir = path.dirname(absolutePath);
 		const fileName = path.basename(absolutePath);
-
-		// Find a free port first
-		const port = this._findFreePort();
 
 		const server = http.createServer((req, res) => {
 			const requestPath = req.url === "/" ? fileName : req.url!.substring(1);
@@ -173,7 +127,6 @@ export class WebView {
 					res.end("File not found");
 					return;
 				}
-
 				const mimeType = this._getMimeType(fullPath);
 				if (mimeType) {
 					res.writeHead(200, { "Content-Type": mimeType });
@@ -184,18 +137,22 @@ export class WebView {
 			});
 		});
 
-		// Use the pre-allocated port
-		server.listen(port, "localhost");
-		this._httpServers.set(filePath, server);
-
-		return `http://localhost:${port}`;
+		// listen(0) asks the OS to assign a free port instantly — no external process needed
+		return new Promise((resolve, reject) => {
+			server.on("error", reject);
+			server.listen(0, "localhost", () => {
+				const addr = server.address() as { port: number };
+				this._httpServers.set(filePath, server);
+				resolve(`http://localhost:${addr.port}`);
+			});
+		});
 	}
 
-	private _buildWindowOptions(
+	private async _buildWindowOptions(
 		title: string,
 		url_or_html: string,
 		options: Partial<WindowOptions>,
-	): WindowOptions {
+	): Promise<WindowOptions> {
 		const opts: WindowOptions = {
 			title: title,
 			width: options.width || 800,
@@ -222,8 +179,9 @@ export class WebView {
 		if (isUrl) {
 			opts.url = url_or_html;
 		} else if (url_or_html.toLowerCase().endsWith(".html")) {
-			// If it's an HTML file path, serve it via HTTP server
-			opts.url = this._createHttpServer(url_or_html);
+			// Serve the HTML file via a local HTTP server;
+			// listen(0) lets the OS pick a free port with zero overhead
+			opts.url = await this._createHttpServer(url_or_html);
 		} else {
 			opts.html = url_or_html;
 		}

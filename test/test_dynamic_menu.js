@@ -3,7 +3,7 @@ import { create_window, start } from '../dist/index.js';
 async function runTests() {
     console.log("Starting Dynamic Context Menu verification...");
 
-    const win = create_window("Dynamic Context Menu Test", "data:text/html,<h1>Dynamic Context Menu</h1><p>Right-click. The menu is created DYNAMICALLY in JS based on where you click (simulated here).</p>", {
+    const win = await create_window("Dynamic Context Menu Test", "data:text/html,<h1>Dynamic Context Menu</h1><p>Right-click. The menu is created DYNAMICALLY in JS based on where you click (simulated here).</p>", {
         width: 800,
         height: 600
     });
