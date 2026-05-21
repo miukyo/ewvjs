@@ -35,7 +35,7 @@ function convertToGuiApp(exePath) {
 
     // Set to IMAGE_SUBSYSTEM_WINDOWS_GUI (2) instead of CONSOLE (3)
     if (currentSubsystem === 3) {
-      // exeBuffer.writeUInt16LE(2, subsystemOffset);
+      exeBuffer.writeUInt16LE(2, subsystemOffset);
       console.log(`   Changed subsystem to GUI (2)`);
 
       // Write the modified executable
@@ -267,80 +267,80 @@ async function packageApp(config) {
   // Step 2: Copy native DLLs next to executable
   console.log('\n🔧 Step 2: Copying native dependencies...');
 
-    if (fs.existsSync(nativePath)) {
-      const targetNativePath = path.join(outputDir, 'native');
+  if (fs.existsSync(nativePath)) {
+    const targetNativePath = path.join(outputDir, 'native');
 
-      // Copy directory recursively
-      copyRecursive(nativePath, targetNativePath);
-      console.log(`   ✓ Native DLLs copied to ${targetNativePath}`);
+    // Copy directory recursively
+    copyRecursive(nativePath, targetNativePath);
+    console.log(`   ✓ Native DLLs copied to ${targetNativePath}`);
 
-      // Copy additional node modules if specified
-      if (additionalModules.length > 0) {
-        console.log('\n   📦 Copying additional node modules...');
-        const targetNodeModulesPath = path.join(targetNativePath, 'node_modules');
-        const copiedModules = new Set();
+    // Copy additional node modules if specified
+    if (additionalModules.length > 0) {
+      console.log('\n   📦 Copying additional node modules...');
+      const targetNodeModulesPath = path.join(targetNativePath, 'node_modules');
+      const copiedModules = new Set();
 
-        /**
-         * Recursively copy module and its dependencies
-         */
-        function copyModuleWithDependencies(moduleName, depth = 0) {
-          const indent = '      ' + '  '.repeat(depth);
+      /**
+       * Recursively copy module and its dependencies
+       */
+      function copyModuleWithDependencies(moduleName, depth = 0) {
+        const indent = '      ' + '  '.repeat(depth);
 
-          // Avoid copying the same module twice
-          if (copiedModules.has(moduleName)) {
-            return;
-          }
+        // Avoid copying the same module twice
+        if (copiedModules.has(moduleName)) {
+          return;
+        }
 
-          try {
-            // Try to resolve the module from the current project
-            const modulePath = require.resolve(moduleName + '/package.json', {
-              paths: [process.cwd()]
-            });
-            const moduleRoot = path.dirname(modulePath);
-            const moduleDestPath = path.join(targetNodeModulesPath, moduleName);
+        try {
+          // Try to resolve the module from the current project
+          const modulePath = require.resolve(moduleName + '/package.json', {
+            paths: [process.cwd()]
+          });
+          const moduleRoot = path.dirname(modulePath);
+          const moduleDestPath = path.join(targetNodeModulesPath, moduleName);
 
-            // Mark as copied before processing to avoid circular dependencies
-            copiedModules.add(moduleName);
+          // Mark as copied before processing to avoid circular dependencies
+          copiedModules.add(moduleName);
 
-            // Copy the module
-            copyRecursive(moduleRoot, moduleDestPath);
-            console.log(`${indent}✓ Copied ${moduleName}`);
+          // Copy the module
+          copyRecursive(moduleRoot, moduleDestPath);
+          console.log(`${indent}✓ Copied ${moduleName}`);
 
-            // Read package.json to get dependencies
-            const packageJsonPath = path.join(moduleRoot, 'package.json');
-            if (fs.existsSync(packageJsonPath)) {
-              const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-              const dependencies = {
-                ...packageJson.dependencies,
-                ...packageJson.optionalDependencies
-              };
+          // Read package.json to get dependencies
+          const packageJsonPath = path.join(moduleRoot, 'package.json');
+          if (fs.existsSync(packageJsonPath)) {
+            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+            const dependencies = {
+              ...packageJson.dependencies,
+              ...packageJson.optionalDependencies
+            };
 
-              // Recursively copy dependencies
-              if (dependencies && Object.keys(dependencies).length > 0) {
-                for (const depName of Object.keys(dependencies)) {
-                  copyModuleWithDependencies(depName, depth + 1);
-                }
+            // Recursively copy dependencies
+            if (dependencies && Object.keys(dependencies).length > 0) {
+              for (const depName of Object.keys(dependencies)) {
+                copyModuleWithDependencies(depName, depth + 1);
               }
             }
-          } catch (error) {
-            if (depth === 0) {
-              // Only warn for top-level modules
-              console.warn(`${indent}⚠ Warning: Could not find module "${moduleName}": ${error.message}`);
-            }
-            // Skip missing optional dependencies silently
           }
+        } catch (error) {
+          if (depth === 0) {
+            // Only warn for top-level modules
+            console.warn(`${indent}⚠ Warning: Could not find module "${moduleName}": ${error.message}`);
+          }
+          // Skip missing optional dependencies silently
         }
-
-        // Copy each requested module with its dependencies
-        for (const moduleName of additionalModules) {
-          copyModuleWithDependencies(moduleName, 0);
-        }
-
-        console.log(`      Total modules copied: ${copiedModules.size}`);
       }
-    } else {
-      console.warn('   ⚠ Warning: Native DLLs not found in ewvjs installation');
+
+      // Copy each requested module with its dependencies
+      for (const moduleName of additionalModules) {
+        copyModuleWithDependencies(moduleName, 0);
+      }
+
+      console.log(`      Total modules copied: ${copiedModules.size}`);
     }
+  } else {
+    console.warn('   ⚠ Warning: Native DLLs not found in ewvjs installation');
+  }
   // Step 3: Bundle assets if provided
   if (assets && fs.existsSync(assets)) {
     console.log('\n📦 Step 3: Bundling assets...');
