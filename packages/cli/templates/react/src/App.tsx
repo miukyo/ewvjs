@@ -13,8 +13,10 @@ interface SystemInfo {
 declare global {
   interface Window {
     ewvjs?: {
-      greet?: (name: string) => Promise<string>;
-      getSystemInfo?: () => Promise<SystemInfo>;
+      api?: {
+        greet?: (name: string) => Promise<string>;
+        getSystemInfo?: () => Promise<SystemInfo>;
+      };
     };
   }
 }
@@ -26,11 +28,11 @@ function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchSystemInfo = useCallback(async () => {
-    const ewvjs = window.ewvjs;
-    if (ewvjs && ewvjs.getSystemInfo) {
+    const api = window.ewvjs?.api;
+    if (api && api.getSystemInfo) {
       setIsRefreshing(true);
       try {
-        const info = await ewvjs.getSystemInfo();
+        const info = await api.getSystemInfo();
         setSystemInfo(info);
       } catch (err) {
         console.error('Failed to fetch system info:', err);
@@ -55,10 +57,10 @@ function App() {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const ewvjs = window.ewvjs;
-    if (ewvjs && ewvjs.greet) {
+    const api = window.ewvjs?.api;
+    if (api && api.greet) {
       try {
-        const res = await ewvjs.greet(name);
+        const res = await api.greet(name);
         setGreeting(res);
       } catch (err) {
         console.error('Failed to greet:', err);
