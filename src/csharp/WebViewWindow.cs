@@ -140,6 +140,7 @@ public class WebViewWindow : Form
     private JSPromise.Deferred onReadyDeferred;
     private string? userDataPath;
     private bool isAnonymous;
+    private bool isTitleBarDisabled = false;
 
     private class FrameInfo
     {
@@ -166,6 +167,24 @@ public class WebViewWindow : Form
     [DllImport("user32.dll")] public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
     [DllImport("user32.dll")] public static extern bool ReleaseCapture();
 
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
+    private const uint SWP_FRAMECHANGED = 0x0020;
+    private const uint SWP_NOMOVE = 0x0002;
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOZORDER = 0x0004;
+    private const uint SWP_NOACTIVATE = 0x0010;
+
+    private const int WM_NCCALCSIZE = 0x83;
+    private const int WM_NCHITTEST = 0x0084;
+    private const int WM_NCACTIVATE = 0x0086;
+
+    private void UpdateFrame()
+    {
+        SetWindowPos(this.Handle, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+
     public WebViewWindow(IDictionary<string, object> options, JSReference? onMessageRef, JSThreadSafeFunction? onMessageTsfn, JSPromise.Deferred onReadyDeferred)
     {
         this.options = options;
@@ -185,7 +204,13 @@ public class WebViewWindow : Form
             this.MinimumSize = new Size(minWidth, minHeight);
         }
 
-        if (options.ContainsKey("frameless") && (bool)options["frameless"]) this.FormBorderStyle = FormBorderStyle.None;
+        if (options.ContainsKey("title_bar") && !(bool)options["title_bar"]) {
+            Console.WriteLine("Title bar is disabled");
+            this.FormBorderStyle = FormBorderStyle.Sizable;
+            this.isTitleBarDisabled = true;
+            this.Padding = new Padding(0);
+        }
+        else if (options.ContainsKey("frameless") && (bool)options["frameless"]) this.FormBorderStyle = FormBorderStyle.None;
         else if (options.ContainsKey("resizable") && !(bool)options["resizable"]) {
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
@@ -317,7 +342,7 @@ public class WebViewWindow : Form
                 bool hasIcon = options.ContainsKey("icon");
                 this.ShowIcon = false && hasIcon;
                 ApplyVibrancy();
-                this.Text = String.Empty;
+                // this.Text = String.Empty;
                 UpdateTheme();
             }
 
@@ -469,12 +494,18 @@ public class WebViewWindow : Form
                 var input = args.Length > 0 ? args[0] : JSValue.Undefined;
                 bool visible = input.IsBoolean() && (bool)input;
                 this.Invoke(new Action(() => {
+                    this.isTitleBarDisabled = !visible;
                     this.ControlBox = visible;
                     bool hasIcon = options.ContainsKey("icon");
                     this.ShowIcon = visible && hasIcon;
-                    this.Text = !visible ? String.Empty : (options.ContainsKey("title") ? (string)options["title"] : "ewvjs Window");
+                    // this.Text = !visible ? String.Empty : (options.ContainsKey("title") ? (string)options["title"] : "ewvjs Window");
+                    this.Padding = new Padding(0);
+                    this.UpdateFrame();
                     UpdateTheme();
                     ApplyVibrancy();
+                    if (this.webView?.CoreWebView2 != null) {
+                        try { this.webView.CoreWebView2.ExecuteScriptAsync($"window.__isTitleBarDisabled = {(this.isTitleBarDisabled ? "true" : "false")};"); } catch { }
+                    }
                 }));
                 return JSValue.Undefined;
             }));
@@ -788,6 +819,8 @@ public class WebViewWindow : Form
                 this.webView.DefaultBackgroundColor = Color.Transparent;
             }
 
+            await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync($"window.__isTitleBarDisabled = {(isTitleBarDisabled ? "true" : "false")}; window.__isWindowMaximized = {(this.WindowState == FormWindowState.Maximized ? "true" : "false")};");
+
             if (options.ContainsKey("initScript"))
                 await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync((string)options["initScript"]);
 
@@ -825,6 +858,24 @@ public class WebViewWindow : Form
             }
             if (msg == "drag") {
                 this.Invoke(new Action(() => { ReleaseCapture(); SendMessage(this.Handle, 0xA1, 0x2, 0); }));
+            } else if (msg != null && msg.StartsWith("resize:")) {
+                if (this.WindowState != FormWindowState.Maximized) {
+                    string dir = msg.Substring(7);
+                    int dirVal = 0;
+                    switch (dir) {
+                        case "left": dirVal = 1; break;
+                        case "right": dirVal = 2; break;
+                        case "top": dirVal = 3; break;
+                        case "topleft": dirVal = 4; break;
+                        case "topright": dirVal = 5; break;
+                        case "bottom": dirVal = 6; break;
+                        case "bottomleft": dirVal = 7; break;
+                        case "bottomright": dirVal = 8; break;
+                    }
+                    if (dirVal > 0) {
+                        this.Invoke(new Action(() => { ReleaseCapture(); SendMessage(this.Handle, 0x0112, 0xF000 + dirVal, 0); }));
+                    }
+                }
             } else {
                 await SendMessageAsync(msg);
             }
@@ -995,6 +1046,8 @@ public class WebViewWindow : Form
 
     private void ApplyVibrancy()
     {
+        if (this.options.ContainsKey("transparent") && (bool)this.options["transparent"]) return;
+
         if (!this.options.ContainsKey("vibrancy") || (bool)this.options["vibrancy"]) {
             this.BackColor = Color.FromArgb(1, 1, 1);
             var margins = new MARGINS { Left = -1, Right = -1, Top = -1, Bottom = -1 };
@@ -1017,6 +1070,106 @@ public class WebViewWindow : Form
     private void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
     {
         if (e.Category == UserPreferenceCategory.General) this.Invoke(new Action(() => UpdateTheme()));
+    }
+
+    protected override void OnSizeChanged(EventArgs e)
+    {
+        base.OnSizeChanged(e);
+        if (this.webView?.CoreWebView2 != null)
+        {
+            try {
+                this.webView.CoreWebView2.ExecuteScriptAsync($"window.__isWindowMaximized = {(this.WindowState == FormWindowState.Maximized ? "true" : "false")};");
+            } catch { }
+        }
+    }
+
+    protected override void WndProc(ref Message message)
+    {
+        if (message.Msg == WM_NCACTIVATE && this.isTitleBarDisabled)
+        {
+            // Set LParam to -1 to prevent DefWindowProc from painting standard borders/captions (suppressing the focus border),
+            // while still allowing the OS/DWM to process activation changes so Mica/Acrylic backdrops update active/inactive state properly.
+            message.LParam = (IntPtr)(-1);
+            base.WndProc(ref message);
+            return;
+        }
+
+        if (message.Msg == WM_NCCALCSIZE && this.isTitleBarDisabled)
+        {
+            if (this.WindowState == FormWindowState.Maximized)
+            {
+                base.WndProc(ref message);
+                return;
+            }
+            message.Result = IntPtr.Zero;
+            return;
+        }
+
+        if (message.Msg == WM_NCHITTEST && this.isTitleBarDisabled)
+        {
+            if (this.WindowState == FormWindowState.Maximized)
+            {
+                base.WndProc(ref message);
+                return;
+            }
+
+            int x = unchecked((short)(long)message.LParam);
+            int y = unchecked((short)((long)message.LParam >> 16));
+            Point clientPoint = this.PointToClient(new Point(x, y));
+
+            int resizeBorder = 8; // standard resizing border size
+
+            bool onLeft = clientPoint.X < resizeBorder;
+            bool onRight = clientPoint.X > this.ClientSize.Width - resizeBorder;
+            bool onTop = clientPoint.Y < resizeBorder;
+            bool onBottom = clientPoint.Y > this.ClientSize.Height - resizeBorder;
+
+            if (onTop && onLeft)
+            {
+                message.Result = (IntPtr)13; // HTTOPLEFT
+                return;
+            }
+            if (onTop && onRight)
+            {
+                message.Result = (IntPtr)14; // HTTOPRIGHT
+                return;
+            }
+            if (onBottom && onLeft)
+            {
+                message.Result = (IntPtr)16; // HTBOTTOMLEFT
+                return;
+            }
+            if (onBottom && onRight)
+            {
+                message.Result = (IntPtr)17; // HTBOTTOMRIGHT
+                return;
+            }
+            if (onTop)
+            {
+                message.Result = (IntPtr)12; // HTTOP
+                return;
+            }
+            if (onBottom)
+            {
+                message.Result = (IntPtr)15; // HTBOTTOM
+                return;
+            }
+            if (onLeft)
+            {
+                message.Result = (IntPtr)10; // HTLEFT
+                return;
+            }
+            if (onRight)
+            {
+                message.Result = (IntPtr)11; // HTRIGHT
+                return;
+            }
+
+            message.Result = (IntPtr)1; // HTCLIENT
+            return;
+        }
+
+        base.WndProc(ref message);
     }
 
     [StructLayout(LayoutKind.Sequential)]

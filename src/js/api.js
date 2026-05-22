@@ -6,13 +6,111 @@ window.ewvjs = {
     _returnValuesCallbacks: {},
 
     _hookDrag: function () {
+        var lastClickTime = 0;
         window.addEventListener('mousedown', function (e) {
             if (e.target.classList.contains('ewvjs-drag-region') || e.target.closest('.ewvjs-drag-region')) {
                 if (e.button === 0) { // Left click
-                    window.chrome.webview.postMessage("drag");
+                    var now = e.timeStamp;
+                    if (now - lastClickTime < 500) {
+                        if (window.__isWindowMaximized) {
+                            window.restore();
+                        } else {
+                            window.maximize();
+                        }
+                        lastClickTime = 0;
+                    } else {
+                        window.chrome.webview.postMessage("drag");
+                        lastClickTime = now;
+                    }
                 }
             }
         });
+    },
+
+    _hookResize: function () {
+        var resizeBorder = 8;
+        var styleEl = null;
+
+        function getDirection(e) {
+            if (!window.__isTitleBarDisabled || window.__isWindowMaximized) return null;
+
+            var x = e.clientX;
+            var y = e.clientY;
+            var w = window.innerWidth;
+            var h = window.innerHeight;
+
+            var onLeft = x < resizeBorder;
+            var onRight = x > w - resizeBorder;
+            var onTop = y < resizeBorder;
+            var onBottom = y > h - resizeBorder;
+
+            if (onTop && onLeft) return "topleft";
+            if (onTop && onRight) return "topright";
+            if (onBottom && onLeft) return "bottomleft";
+            if (onBottom && onRight) return "bottomright";
+            if (onTop) return "top";
+            if (onBottom) return "bottom";
+            if (onLeft) return "left";
+            if (onRight) return "right";
+            return null;
+        }
+
+        function setOverrideCursor(cursor) {
+            if (!styleEl) {
+                styleEl = document.getElementById("ewvjs-cursor-override-style");
+                if (!styleEl) {
+                    styleEl = document.createElement("style");
+                    styleEl.id = "ewvjs-cursor-override-style";
+                    styleEl.type = "text/css";
+                    (document.head || document.documentElement).appendChild(styleEl);
+                }
+            }
+            var css = "* { cursor: " + cursor + " !important; }";
+            if (styleEl.textContent !== css) {
+                styleEl.textContent = css;
+            }
+            if (document.documentElement.style.getPropertyValue("cursor") !== cursor) {
+                document.documentElement.style.setProperty("cursor", cursor, "important");
+            }
+        }
+
+        function clearOverrideCursor() {
+            if (styleEl) {
+                styleEl.textContent = "";
+            } else {
+                var el = document.getElementById("ewvjs-cursor-override-style");
+                if (el) {
+                    el.textContent = "";
+                }
+            }
+            if (document.documentElement.style.getPropertyValue("cursor")) {
+                document.documentElement.style.removeProperty("cursor");
+            }
+        }
+
+        window.addEventListener('mousemove', function (e) {
+            var dir = getDirection(e);
+            if (dir) {
+                var cursor = "";
+                if (dir === "top" || dir === "bottom") cursor = "ns-resize";
+                else if (dir === "left" || dir === "right") cursor = "ew-resize";
+                else if (dir === "topleft" || dir === "bottomright") cursor = "nwse-resize";
+                else if (dir === "topright" || dir === "bottomleft") cursor = "nesw-resize";
+
+                setOverrideCursor(cursor);
+            } else {
+                clearOverrideCursor();
+            }
+        }, true);
+
+        window.addEventListener('mousedown', function (e) {
+            var dir = getDirection(e);
+            if (dir && e.button === 0) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.chrome.webview.postMessage("resize:" + dir);
+            }
+        }, true);
     },
 
     _createApi: function (funcList) {
@@ -263,6 +361,7 @@ window.ewvjs._hookConsole = function () {
 
 window.ewvjs._hookConsole();
 window.ewvjs._hookDrag();
+window.ewvjs._hookResize();
 
 // Add window state methods directly to window object
 window.close = function () {
