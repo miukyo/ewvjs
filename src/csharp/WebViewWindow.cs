@@ -208,7 +208,7 @@ public class WebViewWindow : Form
             Console.WriteLine("Title bar is disabled");
             this.FormBorderStyle = FormBorderStyle.Sizable;
             this.isTitleBarDisabled = true;
-            this.Padding = new Padding(0);
+            this.Padding = this.WindowState == FormWindowState.Maximized ? new Padding(8) : new Padding(0);
         }
         else if (options.ContainsKey("frameless") && (bool)options["frameless"]) this.FormBorderStyle = FormBorderStyle.None;
         else if (options.ContainsKey("resizable") && !(bool)options["resizable"]) {
@@ -499,7 +499,7 @@ public class WebViewWindow : Form
                     bool hasIcon = options.ContainsKey("icon");
                     this.ShowIcon = visible && hasIcon;
                     // this.Text = !visible ? String.Empty : (options.ContainsKey("title") ? (string)options["title"] : "ewvjs Window");
-                    this.Padding = new Padding(0);
+                    this.Padding = (this.isTitleBarDisabled && this.WindowState == FormWindowState.Maximized) ? new Padding(8) : new Padding(0);
                     this.UpdateFrame();
                     UpdateTheme();
                     ApplyVibrancy();
@@ -1075,6 +1075,10 @@ public class WebViewWindow : Form
     protected override void OnSizeChanged(EventArgs e)
     {
         base.OnSizeChanged(e);
+        if (this.isTitleBarDisabled)
+        {
+            this.Padding = this.WindowState == FormWindowState.Maximized ? new Padding(8) : new Padding(0);
+        }
         if (this.webView?.CoreWebView2 != null)
         {
             try {
@@ -1087,6 +1091,11 @@ public class WebViewWindow : Form
     {
         if (message.Msg == WM_NCACTIVATE && this.isTitleBarDisabled)
         {
+            if (this.WindowState == FormWindowState.Maximized)
+            {
+                base.WndProc(ref message);
+                return;
+            }
             // Set LParam to -1 to prevent DefWindowProc from painting standard borders/captions (suppressing the focus border),
             // while still allowing the OS/DWM to process activation changes so Mica/Acrylic backdrops update active/inactive state properly.
             message.LParam = (IntPtr)(-1);

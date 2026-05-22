@@ -8,10 +8,13 @@ window.ewvjs = {
     _hookDrag: function () {
         var lastClickTime = 0;
         window.addEventListener('mousedown', function (e) {
+            if (e.target.closest('.ewvjs-no-drag-region')) {
+                return;
+            }
             if (e.target.classList.contains('ewvjs-drag-region') || e.target.closest('.ewvjs-drag-region')) {
                 if (e.button === 0) { // Left click
                     var now = e.timeStamp;
-                    if (now - lastClickTime < 500) {
+                    if (now - lastClickTime < 200) {
                         if (window.__isWindowMaximized) {
                             window.restore();
                         } else {

@@ -15,7 +15,7 @@
   "dependencies": {
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "ewvjs": "^1.0.14"
+    "ewvjs": "^1.0.15"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
