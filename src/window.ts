@@ -48,9 +48,7 @@ export class Window {
 	}
 
 	async run() {
-		this.controller = await this.platform.createWindow(this.options);
-
-		// Inject exposed functions API after DOM is ready
+		// Build list of exposed functions
 		const funcList = Object.keys(this._exposedFunctions).map((name) => {
 			return {
 				func: name,
@@ -59,10 +57,10 @@ export class Window {
 		});
 
 		if (funcList.length > 0) {
-			const code = `window.ewvjs._createApi(${JSON.stringify(funcList)});`;
-			this._pendingApiInjection = code;
+			(this.options as any).exposedFunctionsList = funcList;
 		}
 
+		this.controller = await this.platform.createWindow(this.options);
 		return this.controller;
 	}
 
@@ -227,13 +225,6 @@ export class Window {
 			}
 
 			if (funcName === "dom_ready") {
-				// DOM is ready, inject the API now
-				if (this._pendingApiInjection) {
-					await this.evaluate(this._pendingApiInjection).catch((err) => {
-						console.error("Failed to inject exposed functions API:", err);
-					});
-					this._pendingApiInjection = null;
-				}
 				return null;
 			}
 

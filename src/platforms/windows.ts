@@ -19,15 +19,15 @@ export class WindowsPlatform {
     createWindow(options: any) {
         // Detect if running as packaged executable (pkg) or in development
         const isPkg = typeof (process as any).pkg !== 'undefined';
-        
+
         let dllDir: string;
         let apiPath: string;
-        
+
         if (isPkg) {
             // When packaged with pkg, native DLLs are next to the executable
             const execDir = path.dirname(process.execPath);
             dllDir = path.join(execDir, 'native');
-            
+
             // api.js is bundled in the snapshot, use snapshot path
             apiPath = path.resolve(__dirname, '../js/api.js');
         } else {
@@ -37,20 +37,20 @@ export class WindowsPlatform {
         }
 
         // Ensure WebView2Loader.dll and others are found
-        const arch = process.arch; 
+        const arch = process.arch;
         const winArch = arch === 'ia32' ? 'win-x86' : `win-${arch}`;
         const runtimePath = path.join(dllDir, 'runtimes', winArch, 'native');
 
         process.env.PATH = `${dllDir};${runtimePath};${process.env.PATH}`;
-        
+
         // Set up module resolution for node-api-dotnet BEFORE requiring WebView.cjs
         const nodeModulesPath = path.join(dllDir, 'node_modules');
         if (fs.existsSync(nodeModulesPath)) {
             const existingNodePath = process.env.NODE_PATH || '';
-            process.env.NODE_PATH = existingNodePath 
-                ? `${nodeModulesPath};${existingNodePath}` 
+            process.env.NODE_PATH = existingNodePath
+                ? `${nodeModulesPath};${existingNodePath}`
                 : nodeModulesPath;
-            
+
             // Add to global module paths so it's available for all requires
             const ModuleConstructor = Module as any;
             if (ModuleConstructor.globalPaths && Array.isArray(ModuleConstructor.globalPaths)) {
@@ -97,7 +97,7 @@ export class WindowsPlatform {
                 // Call jsCallback and handle the result
                 const result = options.jsCallback(message);
 
-                
+
                 // If there's a callback (for messages that expect responses like context menu)
                 if (callback) {
                     if (result && typeof result.then === 'function') {
@@ -120,6 +120,6 @@ export class WindowsPlatform {
         };
         try {
             return EwvjsInterop.invoke(options);
-        } catch(e) { console.error("TS: Invoke failed:", e); throw e; }
+        } catch (e) { console.error("TS: Invoke failed:", e); throw e; }
     }
 }

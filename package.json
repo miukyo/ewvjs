@@ -1,6 +1,6 @@
 {
   "name": "ewvjs",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "Embedded WebView for JavaScript - Edge WebView2 bindings for Node.js",
   "workspaces": [
     "packages/*"
