@@ -170,7 +170,7 @@ export class WebView {
 			...options,
 		};
 
-		const urlRegex = /^(http?|file?|data?):/i;
+		const urlRegex = /^(https?|file|data):/i;
 		const isUrl =
 			urlRegex.test(url_or_html) ||
 			/^localhost(:\d+)?$/i.test(url_or_html) ||
