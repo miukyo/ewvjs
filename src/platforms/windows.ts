@@ -75,7 +75,10 @@ export class WindowsPlatform {
         if (_cachedApiScript === null) {
             _cachedApiScript = fs.readFileSync(apiPath, 'utf8');
         }
-        const apiScript = _cachedApiScript.replace('%(token)s', token);
+        let apiScript = _cachedApiScript.replace('%(token)s', token);
+        if (options.exposedFunctionsList && options.exposedFunctionsList.length > 0) {
+            apiScript += `\nwindow.ewvjs._createApi(${JSON.stringify(options.exposedFunctionsList)});`;
+        }
         options.initScript = apiScript;
 
         // Handle messages from WebView

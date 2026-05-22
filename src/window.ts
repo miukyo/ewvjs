@@ -65,7 +65,7 @@ export class Window {
 	}
 
 	private async _call(method: string, payload: any = null): Promise<any> {
-		if (this._isClosed) {
+		if (this._isClosed && method !== "close") {
 			console.warn(`Cannot call ${method}: Window is closed`);
 			return null;
 		}
@@ -245,7 +245,7 @@ export class Window {
 			if (funcName.startsWith("window_")) {
 				const method = funcName.substring(7); // Remove 'window_' prefix
 				if (typeof (this as any)[method] === "function") {
-					await (this as any)[method]();
+					await (this as any)[method](...params);
 				}
 				return null;
 			}
