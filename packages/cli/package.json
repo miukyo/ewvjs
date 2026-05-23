@@ -1,6 +1,6 @@
 {
   "name": "ewvjs-cli",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "CLI tool for packaging ewvjs applications",
   "main": "./index.js",
   "bin": {
@@ -44,6 +44,6 @@
     "resedit": "^2.0.2"
   },
   "peerDependencies": {
-    "ewvjs": "^1.0.20"
+    "ewvjs": "^1.0.21"
   }
 }

@@ -11,6 +11,7 @@ export class Window {
 	private _menuCallbacks: Map<string, () => void> = new Map();
 	private _exposedFunctions: { [key: string]: Function };
 	private _isClosed: boolean = false;
+	private _closeNotified: boolean = false;
 	private _pendingApiInjection: string | null = null;
 
 	on_context_menu: (
@@ -136,13 +137,15 @@ export class Window {
 	async close() {
 		if (this._isClosed) return;
 		this._isClosed = true;
-		const result = await this._call("close");
-		this._resolveClosed();
-		return result;
+		try {
+			return await this._call("close");
+		} finally {
+			this._notifyClosed();
+		}
 	}
 
 	async destroy() {
-		return this._call("close");
+		return this.close();
 	}
 
 	// Window state methods
@@ -244,36 +247,35 @@ export class Window {
 			// Handle special messages
 			if (funcName === "closed") {
 				this._isClosed = true;
-				this.on_close();
-				this._resolveClosed();
+				this._notifyClosed();
 				return null;
 			}
 
 			if (funcName === "resized") {
 				const size = params[0];
-				this.on_resize(size);
-				if (size.state === "maximized") this.on_maximize();
-				else if (size.state === "minimized") this.on_minimize();
-				else if (size.state === "normal") this.on_restore();
+				this._invokeEventCallback("on_resize", size);
+				if (size.state === "maximized") this._invokeEventCallback("on_maximize");
+				else if (size.state === "minimized") this._invokeEventCallback("on_minimize");
+				else if (size.state === "normal") this._invokeEventCallback("on_restore");
 				return null;
 			}
 
 			if (funcName === "moved") {
-				this.on_move(params[0]);
+				this._invokeEventCallback("on_move", params[0]);
 				return null;
 			}
 
 			if (funcName === "visibility_changed") {
 				const visible = params[0];
-				if (visible) this.on_show();
-				else this.on_hide();
+				if (visible) this._invokeEventCallback("on_show");
+				else this._invokeEventCallback("on_hide");
 				return null;
 			}
 
 			if (funcName === "focus_changed") {
 				const focused = params[0];
-				if (focused) this.on_focus();
-				else this.on_blur();
+				if (focused) this._invokeEventCallback("on_focus");
+				else this._invokeEventCallback("on_blur");
 				return null;
 			}
 
@@ -342,6 +344,26 @@ export class Window {
 		const callback = this._menuCallbacks.get(callbackId);
 		if (callback) callback();
 		return null;
+	}
+
+	private _invokeEventCallback(name: string, ...args: any[]): void {
+		const instanceCallback = (this as any)[name];
+		const optionCallback = (this.options as any)[name];
+		const callback =
+			typeof instanceCallback === "function"
+				? instanceCallback
+				: typeof optionCallback === "function"
+					? optionCallback
+					: null;
+
+		if (callback) callback(...args);
+	}
+
+	private _notifyClosed(): void {
+		if (this._closeNotified) return;
+		this._closeNotified = true;
+		this._invokeEventCallback("on_close");
+		this._resolveClosed();
 	}
 
 	private async _handleContextMenu(
