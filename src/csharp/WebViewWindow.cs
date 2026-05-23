@@ -433,7 +433,7 @@ public class WebViewWindow : Form
             }
 
             bool hasIcon = options.ContainsKey("icon");
-            this.ShowIcon = false && hasIcon;
+            this.ShowIcon = hasIcon;
 
             ApplyVibrancy();
             UpdateTheme();
