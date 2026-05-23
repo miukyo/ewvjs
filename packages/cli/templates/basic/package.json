@@ -9,7 +9,7 @@
     "package": "ewvjs package app.js -o myapp -n \"My App\""
   },
   "dependencies": {
-    "ewvjs": "^1.0.18",
-    "ewvjs-cli": "^1.0.18"
+    "ewvjs": "^1.0.19",
+    "ewvjs-cli": "^1.0.19"
   }
 }

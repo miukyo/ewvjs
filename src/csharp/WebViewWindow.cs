@@ -834,6 +834,7 @@ public class WebViewWindow : Form
             
             webView.CoreWebView2.Settings.AreDevToolsEnabled = debugEnabled;
             webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = debugEnabled;
+            webView.CoreWebView2.Settings.IsStatusBarEnabled = debugEnabled;
             
             webView.CoreWebView2.ContextMenuRequested += CoreWebView2_ContextMenuRequested;
 
