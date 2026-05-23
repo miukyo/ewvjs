@@ -2,10 +2,13 @@ import { WindowsPlatform } from "./platforms/windows.js";
 import { Window } from "./window.js";
 import { WindowOptions } from "./types.js";
 import * as http from "http";
+import * as https from "https";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import mime from "mime-types";
 import { fileURLToPath } from 'url';
+import * as child_process from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,6 +29,152 @@ export class WebView {
 		} else {
 			throw new Error("Platform not supported: " + process.platform);
 		}
+	}
+
+	async autoUpdateFromManifest(manifestUrl: string): Promise<{ updated: boolean; version?: string; error?: string }> {
+		try {
+			const manifestData = await this._fetchJson(manifestUrl);
+			if (!manifestData || !manifestData.url) {
+				return { updated: false, error: 'Invalid manifest: missing url' };
+			}
+
+			const downloadUrl: string = manifestData.url;
+			const version: string | undefined = manifestData.version;
+
+			// download zip to temp file
+			const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ewvjs-update-'));
+			const zipPath = path.join(tmpDir, 'update.zip');
+			await this._downloadFile(downloadUrl, zipPath);
+
+			// extract zip to temp extract dir
+			const extractDir = path.join(tmpDir, 'extracted');
+			fs.mkdirSync(extractDir);
+			// Use system `tar` to extract the downloaded archive. Fail if tar is not available.
+			try {
+				child_process.execFileSync('tar', ['-xf', zipPath, '-C', extractDir], { stdio: 'ignore' });
+			} catch (e: any) {
+				return { updated: false, error: 'Extraction failed: system tar not available or failed: ' + (e && e.message ? e.message : String(e)) };
+			}
+
+			// determine target dir
+			const isPkg = typeof (process as any).pkg !== 'undefined';
+			const targetDir = isPkg ? path.dirname(process.execPath) : path.resolve(__dirname, '..');
+			const restartExe = process.execPath;
+			const restartArgsJson = JSON.stringify(process.argv.slice(1));
+			const helperScriptPath = path.join(tmpDir, 'ewvjs-update-helper.ps1');
+			fs.writeFileSync(helperScriptPath, this._buildUpdateHelperScript(), 'utf8');
+
+			const helper = child_process.spawn(
+				'powershell.exe',
+				[
+					'-NoProfile',
+					'-ExecutionPolicy',
+					'Bypass',
+					'-File',
+					helperScriptPath,
+					extractDir,
+					targetDir,
+					String(process.pid),
+					restartExe,
+					restartArgsJson,
+					targetDir,
+				],
+				{ detached: true, stdio: 'ignore' },
+			);
+			helper.unref();
+
+			return { updated: true, version };
+		} catch (err: any) {
+			return { updated: false, error: err && err.message ? err.message : String(err) };
+		}
+	}
+
+	private _buildUpdateHelperScript(): string {
+		return `param(
+	[string]\$StagingDir,
+	[string]\$TargetDir,
+	[int]\$MainPid,
+	[string]\$RestartExe,
+	[string]\$RestartArgsJson,
+	[string]\$WorkingDir
+)
+
+\$ErrorActionPreference = 'Stop'
+
+while ($true) {
+	try {
+		Get-Process -Id \$MainPid -ErrorAction Stop | Out-Null
+		Start-Sleep -Milliseconds 250
+	} catch {
+		break
+	}
+}
+
+Start-Sleep -Milliseconds 500
+
+\$parentDir = Split-Path -Path \$TargetDir -Parent
+\$targetName = Split-Path -Path \$TargetDir -Leaf
+\$backupDir = Join-Path -Path \$parentDir -ChildPath ($targetName + '.bak.' + ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()))
+
+if (Test-Path -LiteralPath \$backupDir) {
+	Remove-Item -LiteralPath \$backupDir -Recurse -Force
+}
+
+try {
+	Move-Item -LiteralPath \$TargetDir -Destination \$backupDir
+	Move-Item -LiteralPath \$StagingDir -Destination \$TargetDir
+
+	\$restartArgs = @()
+	if (-not [string]::IsNullOrWhiteSpace(\$RestartArgsJson)) {
+		\$restartArgs = \$RestartArgsJson | ConvertFrom-Json
+	}
+
+	Start-Process -FilePath \$RestartExe -ArgumentList \$restartArgs -WorkingDirectory \$WorkingDir
+} catch {
+	if ((Test-Path -LiteralPath \$backupDir) -and -not (Test-Path -LiteralPath \$TargetDir)) {
+		Move-Item -LiteralPath \$backupDir -Destination \$TargetDir -Force
+	}
+	throw
+}`;
+	}
+
+	private _fetchJson(urlStr: string): Promise<any> {
+		return new Promise((resolve, reject) => {
+			const client = urlStr.startsWith('https:') ? https : http;
+			client.get(urlStr, (res) => {
+				let data = '';
+				res.on('data', (chunk) => (data += chunk));
+				res.on('end', () => {
+					try {
+						resolve(JSON.parse(data));
+					} catch (e) {
+						reject(e);
+					}
+				});
+			}).on('error', reject);
+		});
+	}
+
+	private _downloadFile(urlStr: string, destPath: string): Promise<void> {
+		return new Promise((resolve, reject) => {
+			const client = urlStr.startsWith('https:') ? https : http;
+			const file = fs.createWriteStream(destPath);
+			const req = client.get(urlStr, (res) => {
+				if (res.statusCode && res.statusCode >= 400) {
+					file.close();
+					return reject(new Error('Download failed: ' + res.statusCode));
+				}
+				res.pipe(file);
+				file.on('finish', () => {
+					file.close();
+					resolve();
+				});
+			});
+			req.on('error', (err) => {
+				file.close();
+				reject(err);
+			});
+		});
 	}
 
 	async create_window(

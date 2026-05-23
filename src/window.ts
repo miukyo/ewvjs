@@ -18,6 +18,18 @@ export class Window {
 	) => ContextMenuItem[] | null | Promise<ContextMenuItem[] | null> = () =>
 		null;
 
+	on_close: () => void = () => {};
+	on_show: () => void = () => {};
+	on_hide: () => void = () => {};
+	on_resize: (size: { width: number; height: number; state: string }) => void =
+		() => {};
+	on_move: (pos: { x: number; y: number }) => void = () => {};
+	on_focus: () => void = () => {};
+	on_blur: () => void = () => {};
+	on_maximize: () => void = () => {};
+	on_minimize: () => void = () => {};
+	on_restore: () => void = () => {};
+
 	constructor(
 		platform: any,
 		options: WindowOptions,
@@ -26,6 +38,18 @@ export class Window {
 		this.platform = platform;
 		this.options = { ...options };
 		this._exposedFunctions = exposedFunctions;
+
+		// Initialize event callbacks from options
+		if (options.on_close) this.on_close = options.on_close;
+		if (options.on_show) this.on_show = options.on_show;
+		if (options.on_hide) this.on_hide = options.on_hide;
+		if (options.on_resize) this.on_resize = options.on_resize;
+		if (options.on_move) this.on_move = options.on_move;
+		if (options.on_focus) this.on_focus = options.on_focus;
+		if (options.on_blur) this.on_blur = options.on_blur;
+		if (options.on_maximize) this.on_maximize = options.on_maximize;
+		if (options.on_minimize) this.on_minimize = options.on_minimize;
+		if (options.on_restore) this.on_restore = options.on_restore;
 
 		this._closedPromise = new Promise((resolve) => {
 			this._resolveClosed = resolve;
@@ -220,7 +244,36 @@ export class Window {
 			// Handle special messages
 			if (funcName === "closed") {
 				this._isClosed = true;
+				this.on_close();
 				this._resolveClosed();
+				return null;
+			}
+
+			if (funcName === "resized") {
+				const size = params[0];
+				this.on_resize(size);
+				if (size.state === "maximized") this.on_maximize();
+				else if (size.state === "minimized") this.on_minimize();
+				else if (size.state === "normal") this.on_restore();
+				return null;
+			}
+
+			if (funcName === "moved") {
+				this.on_move(params[0]);
+				return null;
+			}
+
+			if (funcName === "visibility_changed") {
+				const visible = params[0];
+				if (visible) this.on_show();
+				else this.on_hide();
+				return null;
+			}
+
+			if (funcName === "focus_changed") {
+				const focused = params[0];
+				if (focused) this.on_focus();
+				else this.on_blur();
 				return null;
 			}
 

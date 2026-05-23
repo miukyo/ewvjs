@@ -13,6 +13,7 @@
 - ⚡ **Node.js Integration**: Call Node.js functions directly from your frontend code.
 - 🖱️ **Context Menus**: Customizable native right-click context menus.
 - 📦 **Packaging**: Built-in CLI tool to package your app into a standalone executable.
+- 🔄 **Auto Update**: Download a hosted manifest and atomically swap in a packaged app update.
 - 🔧 **Native Bindings**: High-performance C# bindings via `node-api-dotnet`.
 - 🖼️ **Customization**: Support for frameless windows, transparency, vibrancy, and more.
 
@@ -94,6 +95,37 @@ Exposes a Node.js function to the frontend.
 
 *   `name` (string): The name of the function as it will appear in `window.ewvjs.api`.
 *   `callback` (function): The Node.js function to execute. Can be async.
+
+### `autoUpdateFromManifest(manifestUrl)`
+
+Downloads an update manifest, fetches the packaged app ZIP, stages it, and performs an atomic directory swap from a detached PowerShell helper after the current process exits. The helper then relaunches the app.
+
+**Manifest format:**
+
+```json
+{
+    "version": "0.0.2",
+    "url": "https://example.com/updater_test/update_balbal.zip"
+}
+```
+
+**Usage:**
+
+```javascript
+const result = await ewvjs.autoUpdateFromManifest('https://example.com/manifest.json');
+
+if (result.updated) {
+    console.log('Updated to', result.version);
+} else {
+    console.error('Update failed:', result.error);
+}
+```
+
+**Notes:**
+
+* The archive is extracted with Windows `tar`.
+* The running app cannot overwrite itself directly, so the helper process handles the swap.
+* A backup copy is kept during the swap to reduce the chance of update failure leaving the install broken.
 
 ### Window Options
 
