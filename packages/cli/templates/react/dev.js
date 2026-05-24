@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import http from 'http';
 
 function checkViteReady(url, callback) {
@@ -11,9 +11,22 @@ function checkViteReady(url, callback) {
 }
 
 console.log('Starting Vite development server...');
-const vite = spawn('npx', ['vite'], { stdio: 'inherit', shell: true });
 
-// Check when Vite is ready at http://localhost:5173
+const vite = spawn('npx.cmd', ['vite'], { 
+  stdio: 'inherit',
+  shell: true 
+});
+
+function cleanExit(code = 0) {
+  if (vite.pid) {
+    exec(`taskkill /pid ${vite.pid} /T /F`, () => {
+      process.exit(code);
+    });
+  } else {
+    process.exit(code);
+  }
+}
+
 console.log('Waiting for Vite server to boot...');
 const checkInterval = setInterval(() => {
   checkViteReady('http://localhost:5173', (ready) => {
@@ -24,19 +37,13 @@ const checkInterval = setInterval(() => {
       const app = spawn('node', ['app.js', '--dev'], { stdio: 'inherit', shell: true });
       
       app.on('close', (code) => {
-        console.log(`ewvjs window closed (exit code ${code}). Terminating Vite server...`);
-        vite.kill();
-        process.exit(code);
+        console.log(`ewvjs window closed (exit code ${code}). Cleaning up loops...`);
+        cleanExit(code);
       });
     }
   });
 }, 300);
 
-process.on('SIGINT', () => {
-  vite.kill();
-  process.exit();
-});
-process.on('SIGTERM', () => {
-  vite.kill();
-  process.exit();
-});
+
+process.on('SIGINT', () => cleanExit(0));
+process.on('SIGTERM', () => cleanExit(0));
