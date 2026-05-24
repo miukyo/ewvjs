@@ -179,6 +179,33 @@ Once a window is created, you can control it using the returned `Window` instanc
     *   `setIcon(path)`
 *   **Cookies**: `getCookies()`, `setCookie(name, value, domain, path)`, `clearCookies()`
 
+### Window Events
+
+Window lifecycle and state events are assigned directly on the `Window` instance.
+
+```javascript
+win.on_close = () => {
+    console.log('window closed');
+};
+
+win.on_resize = (size) => {
+    console.log('resized to', size.width, size.height, size.state);
+};
+```
+
+Available callbacks:
+
+*   `on_close()` - Fired when the window closes.
+*   `on_show()` - Fired when the window becomes visible.
+*   `on_hide()` - Fired when the window is hidden.
+*   `on_resize(size)` - Fired when the window is resized. `size` includes `width`, `height`, and `state`.
+*   `on_move(pos)` - Fired when the window moves. `pos` includes `x` and `y`.
+*   `on_focus()` - Fired when the window gains focus.
+*   `on_blur()` - Fired when the window loses focus.
+*   `on_maximize()` - Fired when the window is maximized.
+*   `on_minimize()` - Fired when the window is minimized.
+*   `on_restore()` - Fired when the window returns to the normal state.
+
 ### Executing JavaScript inside IFrames (Cross-Origin Bypass)
 
 The `evaluate` method supports executing and injecting JavaScript directly inside any subframe/iframe context, completely bypassing standard browser Same-Origin Policy (SOP) limitations. This enables the native Node.js layer to inspect and mutate the DOM of cross-origin or same-origin subframes natively.

@@ -40,18 +40,6 @@ export class Window {
 		this.options = { ...options };
 		this._exposedFunctions = exposedFunctions;
 
-		// Initialize event callbacks from options
-		if (options.on_close) this.on_close = options.on_close;
-		if (options.on_show) this.on_show = options.on_show;
-		if (options.on_hide) this.on_hide = options.on_hide;
-		if (options.on_resize) this.on_resize = options.on_resize;
-		if (options.on_move) this.on_move = options.on_move;
-		if (options.on_focus) this.on_focus = options.on_focus;
-		if (options.on_blur) this.on_blur = options.on_blur;
-		if (options.on_maximize) this.on_maximize = options.on_maximize;
-		if (options.on_minimize) this.on_minimize = options.on_minimize;
-		if (options.on_restore) this.on_restore = options.on_restore;
-
 		this._closedPromise = new Promise((resolve) => {
 			this._resolveClosed = resolve;
 		});

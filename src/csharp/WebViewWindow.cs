@@ -267,13 +267,17 @@ public class WebViewWindow : Form
 
         this.Load += WebViewWindow_Load;
         this.FormClosing += WebViewWindow_FormClosing;
-        this.FormClosed += (s, e) =>
+        this.FormClosing += (s, e) =>
         {
+            if (e.Cancel) return;
             if (tsfnValid)
             {
-                Task.Run(() => SendMessageAsync("[\"closed\", \"\"]")).Wait(100);
-                tsfnValid = false;
+                try { SendMessageAsync("[\"closed\", \"\"]").Wait(500); } catch { }
             }
+        };
+        this.FormClosed += (s, e) =>
+        {
+            tsfnValid = false;
             if (this.isAnonymous && !string.IsNullOrEmpty(this.userDataPath)) CleanupUserData(this.userDataPath);
             if (this.onMessageRef != null)
             {
