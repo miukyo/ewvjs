@@ -224,16 +224,15 @@ try {
 
 		if (this._resolveStart) {
 			this._resolveStart();
-			this._resolveOnce = true;
 			this._resolveStart = null;
 		}
 
-		// Force exit after a short delay to ensure cleanup completes
-		if (this._resolveOnce) {
-			setTimeout(() => {
-				process.exit(0);
-			}, 100);
-		}
+		// Force exit after a short delay to ensure cleanup completes.
+		// This keeps the process from hanging after the last window is closed,
+		// even when start() was never awaited.
+		setTimeout(() => {
+			process.exit(0);
+		}, 100);
 	}
 	expose(name: string, func: Function): void {
 		this.exposed_functions[name] = func;

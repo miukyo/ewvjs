@@ -20,6 +20,6 @@
         "src/csharp/**/*",
         "node_modules",
         "dist",
-        "test"
+        ".vs/test"
     ]
 }
