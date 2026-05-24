@@ -7,6 +7,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import mime from "mime-types";
+import semver from 'semver';
 import { fileURLToPath } from 'url';
 import * as child_process from 'child_process';
 
@@ -40,6 +41,22 @@ export class WebView {
 
 			const downloadUrl: string = manifestData.url;
 			const version: string | undefined = manifestData.version;
+
+			// If running on Windows and native helper available, compare manifest version to installed exe
+			try {
+				if (process.platform === 'win32' && this.platform && typeof (this.platform as any).getExeVersion === 'function') {
+					const current = (this.platform as any).getExeVersion(process.execPath) as string | null;
+					if (version && current) {
+						const mv = semver.coerce(version);
+						const cv = semver.coerce(current);
+						if (mv && cv) {
+							if (!semver.gt(mv, cv)) {
+								return { updated: false, version: current };
+							}
+						}
+					}
+				}
+			} catch (e) { /* ignore compare errors and proceed with update */ }
 
 			// download zip to temp file
 			const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ewvjs-update-'));

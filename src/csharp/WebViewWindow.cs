@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Threading;
@@ -135,6 +136,30 @@ public static class EwvjsInterop
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         return promise;
+    }
+
+    [JSExport]
+    public static JSValue GetFileVersion(JSValue inputVal)
+    {
+        try
+        {
+            string? path = null;
+            if (!inputVal.IsUndefined() && inputVal.IsString()) path = (string)inputVal;
+            if (string.IsNullOrEmpty(path))
+            {
+                try { path = Process.GetCurrentProcess().MainModule?.FileName; } catch { path = null; }
+            }
+            if (string.IsNullOrEmpty(path)) return JSValue.Null;
+
+            var fvi = FileVersionInfo.GetVersionInfo(path);
+            var ver = fvi.FileVersion ?? fvi.ProductVersion ?? "";
+            return (JSValue)ver;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("GetFileVersion error: " + ex.Message);
+            return JSValue.Null;
+        }
     }
 }
 

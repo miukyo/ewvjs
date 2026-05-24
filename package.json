@@ -1,6 +1,6 @@
 {
   "name": "ewvjs",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "description": "Embedded WebView for JavaScript - Edge WebView2 bindings for Node.js",
   "workspaces": [
     "packages/*"
@@ -49,10 +49,12 @@
   "devDependencies": {
     "@types/mime-types": "^3.0.1",
     "@types/node": "^25.9.1",
+    "@types/semver": "^7.3.12",
     "typescript": "^5.9.3"
   },
   "dependencies": {
     "mime-types": "^3.0.2",
-    "node-api-dotnet": "^0.9.19"
+    "node-api-dotnet": "^0.9.19",
+    "semver": "^7.7.3"
   }
 }

@@ -16,6 +16,35 @@ export class WindowsPlatform {
     constructor() {
     }
 
+    getExeVersion(exePath?: string): string | null {
+        // Compute dllDir similar to createWindow
+        const isPkg = typeof (process as any).pkg !== 'undefined';
+
+        let dllDir: string;
+        if (isPkg) {
+            const execDir = path.dirname(process.execPath);
+            dllDir = path.join(execDir, 'native');
+        } else {
+            dllDir = path.resolve(__dirname, '../../native');
+        }
+
+        try {
+            const nativeModule = require(path.join(dllDir, 'WebView.cjs'));
+            const EwvjsInterop = nativeModule.EwvjsInterop;
+            if (typeof EwvjsInterop.getFileVersion === 'function') {
+                try {
+                    const res = EwvjsInterop.getFileVersion(exePath || process.execPath);
+                    return res || null;
+                } catch (e) {
+                    return null;
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+        return null;
+    }
+
     createWindow(options: any) {
         // Detect if running as packaged executable (pkg) or in development
         const isPkg = typeof (process as any).pkg !== 'undefined';
