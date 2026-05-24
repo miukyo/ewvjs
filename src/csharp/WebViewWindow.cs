@@ -272,7 +272,7 @@ public class WebViewWindow : Form
             if (e.Cancel) return;
             if (tsfnValid)
             {
-                try { SendMessageAsync("[\"closed\", \"\"]").Wait(500); } catch { }
+                try { _ = SendMessageAsync("[\"closed\", \"\"]"); } catch { }
             }
         };
         this.FormClosed += (s, e) =>
